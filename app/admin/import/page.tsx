@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,21 +14,26 @@ type ImportResult = {
 };
 
 export default function ImportPage() {
-  const [fromQ, setFromQ] = useState("20150");
+  const [fromQ, setFromQ] = useState("20151");
   const [toQ, setToQ] = useState("20244");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [rebuildOnly, setRebuildOnly] = useState(false);
 
-  const importAction = useAction(api.importMlit.importFromMlit);
   const rebuildCache = useMutation(api.analytics.rebuildCache);
 
   const handleImport = async () => {
     setRunning(true);
     setResult(null);
     try {
-      const res = await importAction({ fromQuarter: fromQ, toQuarter: toQ });
-      setResult(res as ImportResult);
+      // Convex Action は US サーバーから実行されるため Next.js API Route 経由で呼び出す
+      const res = await fetch("/api/import-mlit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromQuarter: fromQ, toQuarter: toQ }),
+      });
+      const data = await res.json();
+      setResult(data);
     } catch (e) {
       setResult({ total: 0, leaseholdFound: 0, imported: 0, errors: [String(e)] });
     } finally {
