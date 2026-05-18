@@ -233,3 +233,158 @@ export const seedProperties = internalMutation({
     return inserted;
   },
 });
+
+// Tier1物件のSUUMO中古売り出し価格データ登録（2026年5月調査）
+export const seedTier1Listings = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // propertyId は本番DBで登録済みの値
+    // transactionYear=2026, priceType="listing", 残存年数=期限年-2026
+    const listings: Array<{
+      propertyName: string;
+      propertyId: string;
+      price: number;       // 万円
+      areaSqm: number;
+      floor: number;
+      pricePerSqm: number;
+      remainingLeaseYears: number;
+      source: string;
+    }> = [
+      // ─── シティタワー品川（期限2078年 → 残52年）──────────────────
+      {
+        propertyName: "シティタワー品川",
+        propertyId: "j973rkhggeftq2b181tpaj613s86ym81",
+        price: 11900, areaSqm: 82.77, floor: 4,
+        pricePerSqm: Math.round(11900 / 82.77 * 10) / 10,
+        remainingLeaseYears: 52,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20666800/",
+      },
+      {
+        propertyName: "シティタワー品川",
+        propertyId: "j973rkhggeftq2b181tpaj613s86ym81",
+        price: 12500, areaSqm: 84.26, floor: 18,
+        pricePerSqm: Math.round(12500 / 84.26 * 10) / 10,
+        remainingLeaseYears: 52,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20765077/",
+      },
+      {
+        propertyName: "シティタワー品川",
+        propertyId: "j973rkhggeftq2b181tpaj613s86ym81",
+        price: 12500, areaSqm: 82.77, floor: 35,
+        pricePerSqm: Math.round(12500 / 82.77 * 10) / 10,
+        remainingLeaseYears: 52,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20865595/",
+      },
+      {
+        propertyName: "シティタワー品川",
+        propertyId: "j973rkhggeftq2b181tpaj613s86ym81",
+        price: 14500, areaSqm: 82.77, floor: 40,
+        pricePerSqm: Math.round(14500 / 82.77 * 10) / 10,
+        remainingLeaseYears: 52,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20810315/",
+      },
+      // ─── 広尾ガーデンフォレスト（期限2063年 → 残37年）─────────────
+      {
+        propertyName: "広尾ガーデンフォレスト",
+        propertyId: "j971ws7ypt2qr4gezmke8anfrd86z6a2",
+        price: 30000, areaSqm: 108.27, floor: 8,
+        pricePerSqm: Math.round(30000 / 108.27 * 10) / 10,
+        remainingLeaseYears: 37,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_shibuya/nc_79166166/",
+      },
+      {
+        propertyName: "広尾ガーデンフォレスト",
+        propertyId: "j971ws7ypt2qr4gezmke8anfrd86z6a2",
+        price: 31800, areaSqm: 96.48, floor: 4,
+        pricePerSqm: Math.round(31800 / 96.48 * 10) / 10,
+        remainingLeaseYears: 37,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_shibuya/nc_78859290/",
+      },
+      // ─── パークコート渋谷 ザ タワー（期限2093年 → 残67年）──────────
+      {
+        propertyName: "パークコート渋谷 ザ タワー",
+        propertyId: "j97b8wwhdmw4nm9t2gxds989qh86zsf6",
+        price: 17500, areaSqm: 59.34, floor: 19,
+        pricePerSqm: Math.round(17500 / 59.34 * 10) / 10,
+        remainingLeaseYears: 67,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_shibuya/nc_78877576/",
+      },
+      {
+        propertyName: "パークコート渋谷 ザ タワー",
+        propertyId: "j97b8wwhdmw4nm9t2gxds989qh86zsf6",
+        price: 24800, areaSqm: 63.35, floor: 38,
+        pricePerSqm: Math.round(24800 / 63.35 * 10) / 10,
+        remainingLeaseYears: 67,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_shibuya/nc_20437784/",
+      },
+      {
+        propertyName: "パークコート渋谷 ザ タワー",
+        propertyId: "j97b8wwhdmw4nm9t2gxds989qh86zsf6",
+        price: 33000, areaSqm: 93.13, floor: 24,
+        pricePerSqm: Math.round(33000 / 93.13 * 10) / 10,
+        remainingLeaseYears: 67,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_shibuya/nc_20437192/",
+      },
+      // ─── パークコート神宮前（期限2061年 → 残35年）───────────────────
+      {
+        propertyName: "パークコート神宮前",
+        propertyId: "j9794mx9mm62ap9mk6r09hf5zx86z1nc",
+        price: 5999, areaSqm: 37.55, floor: 2,
+        pricePerSqm: Math.round(5999 / 37.55 * 10) / 10,
+        remainingLeaseYears: 35,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_shibuya/nc_20011741/",
+      },
+      // ─── パークホームズ南麻布 ザ レジデンス（期限2064年 → 残38年）──
+      {
+        propertyName: "パークホームズ南麻布 ザ レジデンス",
+        propertyId: "j97f9bnx3d9bfccr9t6rk9j9rd86z0eb",
+        price: 14800, areaSqm: 63.13, floor: 13,
+        pricePerSqm: Math.round(14800 / 63.13 * 10) / 10,
+        remainingLeaseYears: 38,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20861607/",
+      },
+      {
+        propertyName: "パークホームズ南麻布 ザ レジデンス",
+        propertyId: "j97f9bnx3d9bfccr9t6rk9j9rd86z0eb",
+        price: 14800, areaSqm: 63.13, floor: 13,
+        pricePerSqm: Math.round(14800 / 63.13 * 10) / 10,
+        remainingLeaseYears: 38,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20862052/",
+      },
+    ];
+
+    const results: string[] = [];
+    for (const l of listings) {
+      // 同一source（URL）で既存チェック
+      const existing = await ctx.db
+        .query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", l.propertyId as never))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("source"), l.source),
+            q.eq(q.field("priceType"), "listing"),
+          )
+        )
+        .first();
+      if (existing) {
+        results.push(`SKIP: ${l.propertyName} ${l.price}万（既存）`);
+        continue;
+      }
+      await ctx.db.insert("transactions", {
+        propertyId: l.propertyId as never,
+        transactionYearQ: "2026Q2",
+        transactionYear: 2026,
+        price: l.price,
+        areaSqm: l.areaSqm,
+        floor: l.floor,
+        remainingLeaseYears: l.remainingLeaseYears,
+        pricePerSqm: l.pricePerSqm,
+        isNewConstruction: false,
+        priceType: "listing",
+        source: l.source,
+      });
+      results.push(`OK: ${l.propertyName} ${l.price}万（${l.areaSqm}m², 残${l.remainingLeaseYears}年）`);
+    }
+    return results;
+  },
+});
