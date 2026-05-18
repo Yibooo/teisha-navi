@@ -1031,6 +1031,188 @@ export const seedTier3B = internalMutation({
   },
 });
 
+// Tier3C物件（5件）の物件マスタ + 新築価格 + SUUMO売り出し価格データ登録（2026年5月調査）
+// 目的: 残存期間短い物件のデータを収集し、資産価値カーブの左端（短残存帯）を補強
+export const seedTier3C = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const results: string[] = [];
+
+    const ensureProperty = async (prop: {
+      name: string; ward: string; address: string;
+      leaseStartYear: number; leaseTotalYears: number; buildingYear: number;
+      totalUnits: number; nearestStation?: string; walkMinutes?: number; notes?: string;
+    }) => {
+      const existing = await ctx.db
+        .query("properties")
+        .withSearchIndex("search_name", (q) => q.search("name", prop.name))
+        .collect();
+      const exact = existing.find((p) => p.name === prop.name);
+      if (exact) { results.push(`SKIP property: ${prop.name}（既存）`); return exact._id as string; }
+      const id = await ctx.db.insert("properties", prop);
+      results.push(`OK property: ${prop.name}`);
+      return id as string;
+    };
+
+    const insertListing = async (
+      propertyName: string, propertyId: string,
+      price: number, areaSqm: number, floor: number | undefined,
+      remainingLeaseYears: number, transactionYear: number, source: string,
+    ) => {
+      const existing = await ctx.db.query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", propertyId as never))
+        .filter((q) => q.and(q.eq(q.field("source"), source), q.eq(q.field("priceType"), "listing")))
+        .first();
+      if (existing) { results.push(`SKIP listing: ${propertyName} ${price}万`); return; }
+      const pricePerSqm = Math.round(price / areaSqm * 100) / 100;
+      const data: Record<string, unknown> = {
+        propertyId: propertyId as never,
+        transactionYearQ: `${transactionYear}Q2`, transactionYear,
+        price, areaSqm, remainingLeaseYears, pricePerSqm,
+        isNewConstruction: false, priceType: "listing", source,
+      };
+      if (floor !== undefined) data.floor = floor;
+      await ctx.db.insert("transactions", data as never);
+      results.push(`OK listing: ${propertyName} ${price}万（${areaSqm}m², 残${remainingLeaseYears}年）`);
+    };
+
+    const insertNewConst = async (
+      propertyName: string, propertyId: string,
+      transactionYear: number, price: number, areaSqm: number,
+      floor: number | undefined, remainingLeaseYears: number, source: string,
+    ) => {
+      const existing = await ctx.db.query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", propertyId as never))
+        .filter((q) => q.and(
+          q.eq(q.field("priceType"), "new_construction"),
+          q.eq(q.field("price"), price),
+          q.eq(q.field("areaSqm"), areaSqm),
+        ))
+        .first();
+      if (existing) { results.push(`SKIP nc: ${propertyName} ${price}万`); return; }
+      const pricePerSqm = Math.round(price / areaSqm * 100) / 100;
+      const data: Record<string, unknown> = {
+        propertyId: propertyId as never,
+        transactionYearQ: `${transactionYear}Q1`, transactionYear,
+        price, areaSqm, remainingLeaseYears, pricePerSqm,
+        isNewConstruction: true, priceType: "new_construction", source,
+      };
+      if (floor !== undefined) data.floor = floor;
+      await ctx.db.insert("transactions", data as never);
+      results.push(`OK nc: ${propertyName} ${price}万（${areaSqm}m², 残${remainingLeaseYears}年）`);
+    };
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3C-1: パークコート麻布鳥居坂（港区, 竣工1999, 借地〜2049年・残23年）
+    // ──────────────────────────────────────────────────────────────────
+    const propPCTori = await ensureProperty({
+      name: "パークコート麻布鳥居坂",
+      ward: "港区",
+      address: "東京都港区六本木5丁目15-12",
+      leaseStartYear: 1999, leaseTotalYears: 50,
+      buildingYear: 1999, totalUnits: 59,
+      nearestStation: "麻布十番", walkMinutes: 6,
+      notes: "借地期限: 2049年10月1日。定期地上権（地上権）。地主=フィリピン政府。三井不動産分譲。清水建設施工。残存約23年。",
+    });
+    // 2009年中古売り出し事例（新築後最初期の公開データ、残40年 = 2049-2009）
+    await insertListing("パークコート麻布鳥居坂", propPCTori, 9500, 95.75, 5, 40, 2009,
+      "http://condo.seesaa.net/article/117243462.html");
+    // 2026年現在売り出し（残23年 = 2049-2026）
+    await insertListing("パークコート麻布鳥居坂", propPCTori, 15000, 91.34, undefined, 23, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20658364/");
+    await insertListing("パークコート麻布鳥居坂", propPCTori, 11500, 75.47, 5, 23, 2026,
+      "https://sumikae.ttfuhan.co.jp/mansion/NE82QX014/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3C-2: サンクタス神楽坂（新宿区, 竣工2011, 借地〜2081年・残55年）
+    // ──────────────────────────────────────────────────────────────────
+    const propSanctusK2 = await ensureProperty({
+      name: "サンクタス神楽坂",
+      ward: "新宿区",
+      address: "東京都新宿区岩戸町20-1",
+      leaseStartYear: 2011, leaseTotalYears: 70,
+      buildingYear: 2011, totalUnits: 49,
+      nearestStation: "牛込神楽坂", walkMinutes: 1,
+      notes: "借地期限: 2081年3月31日。オリックス不動産分譲。地代約2万円/月。都営大江戸線最寄り。",
+    });
+    // 新築価格: 公開データなし
+    // listings（残55年 = 2081-2026）
+    await insertListing("サンクタス神楽坂", propSanctusK2, 12800, 80.43, undefined, 55, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_76062971/");
+    await insertListing("サンクタス神楽坂", propSanctusK2, 15300, 80.43, 3, 55, 2026,
+      "https://sumikae.ttfuhan.co.jp/mansion/NED1Y9004/");
+    await insertListing("サンクタス神楽坂", propSanctusK2, 10500, 57.43, 5, 55, 2026,
+      "https://sumikae.ttfuhan.co.jp/mansion/H06830505/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3C-3: イニシアイオ湯島三組坂上（文京区, 竣工2009, 借地〜2059年・残33年）
+    // ──────────────────────────────────────────────────────────────────
+    const propInishia = await ensureProperty({
+      name: "イニシアイオ湯島三組坂上",
+      ward: "文京区",
+      address: "東京都文京区湯島2丁目22-2",
+      leaseStartYear: 2007, leaseTotalYears: 52,
+      buildingYear: 2009, totalUnits: 30,
+      nearestStation: "湯島", walkMinutes: 5,
+      notes: "借地期限: 2059年6月1日。コスモスイニシア分譲。地代22,800円/月。東京メトロ千代田線最寄り。残存約33年。",
+    });
+    // 新築価格: 公開データなし
+    // listing（残33年 = 2059-2026）
+    await insertListing("イニシアイオ湯島三組坂上", propInishia, 8180, 57.10, 11, 33, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_bunkyo/nc_77889668/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3C-4: クレヴィア上野松が谷（台東区, 竣工2011, 借地〜2082年・残56年）
+    // ──────────────────────────────────────────────────────────────────
+    const propCrevia = await ensureProperty({
+      name: "クレヴィア上野松が谷",
+      ward: "台東区",
+      address: "東京都台東区松が谷2丁目31-9",
+      leaseStartYear: 2010, leaseTotalYears: 72,
+      buildingYear: 2011, totalUnits: 39,
+      nearestStation: "稲荷町", walkMinutes: 8,
+      notes: "借地期限: 2082年1月28日（2010年1月29日〜）。伊藤忠都市開発分譲。地代4,280〜5,220円/月。",
+    });
+    // 新築価格: 公開データなし
+    // listings（残56年 = 2082-2026）
+    await insertListing("クレヴィア上野松が谷", propCrevia, 8480, 73.16, 3, 56, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_taito/nc_76827064/");
+    await insertListing("クレヴィア上野松が谷", propCrevia, 8480, 73.16, undefined, 56, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_taito/nc_76543797/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3C-5: ブリリア月島四丁目（中央区, 竣工2024, 借地〜2096年・残70年）
+    // ──────────────────────────────────────────────────────────────────
+    const propBrilliaT = await ensureProperty({
+      name: "ブリリア月島四丁目",
+      ward: "中央区",
+      address: "東京都中央区月島4丁目2-13",
+      leaseStartYear: 2022, leaseTotalYears: 74,
+      buildingYear: 2024, totalUnits: 77,
+      nearestStation: "月島", walkMinutes: 3,
+      notes: "借地期限: 2096年1月31日（2022年6月23日〜）。東京建物分譲。都営大江戸線・有楽町線最寄り。地代+解体積立金合計約1万円/月。",
+    });
+    const srcBT = "https://suumo.jp/ms/shinchiku/tokyo/sc_chuo/nc_67727287/";
+    // 新築（残72年 = 2096-2024）
+    await insertNewConst("ブリリア月島四丁目", propBrilliaT, 2024, 5100, 38.36, undefined, 72, srcBT);
+    await insertNewConst("ブリリア月島四丁目", propBrilliaT, 2024, 5400, 41.30, undefined, 72, srcBT);
+    await insertNewConst("ブリリア月島四丁目", propBrilliaT, 2024, 5500, 41.54, undefined, 72, srcBT);
+    await insertNewConst("ブリリア月島四丁目", propBrilliaT, 2024, 8000, 56.14, undefined, 72, srcBT);
+    await insertNewConst("ブリリア月島四丁目", propBrilliaT, 2024, 8800, 61.17, undefined, 72, srcBT);
+    // listings（残70年 = 2096-2026）: 新築後転売・在庫物件。sourceにpriceを付加して区別
+    await insertListing("ブリリア月島四丁目", propBrilliaT, 7690, 38.36, undefined, 70, 2026,
+      srcBT + "?listing=7690");
+    await insertListing("ブリリア月島四丁目", propBrilliaT, 7780, 41.54, undefined, 70, 2026,
+      srcBT + "?listing=7780");
+    await insertListing("ブリリア月島四丁目", propBrilliaT, 11980, 56.14, undefined, 70, 2026,
+      srcBT + "?listing=11980");
+    await insertListing("ブリリア月島四丁目", propBrilliaT, 12700, 61.17, undefined, 70, 2026,
+      srcBT + "?listing=12700");
+
+    return results;
+  },
+});
+
 // Tier2物件の新築価格 + SUUMO売り出し価格データ登録（2026年5月調査）
 export const seedTier2 = internalMutation({
   args: {},
