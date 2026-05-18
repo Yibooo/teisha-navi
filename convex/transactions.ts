@@ -29,6 +29,7 @@ export const upsert = mutation({
     floor: v.optional(v.number()),
     remainingLeaseYears: v.number(),
     pricePerSqm: v.number(),
+    pricePerTsubo: v.optional(v.number()),
     isNewConstruction: v.boolean(),
     priceType: v.optional(v.union(
       v.literal("new_construction"),
@@ -38,7 +39,12 @@ export const upsert = mutation({
     source: v.string(),
   },
   handler: async (ctx, args) => {
-    const { id, ...data } = args;
+    const { id, ...rest } = args;
+    // pricePerTsubo が未指定の場合は pricePerSqm から自動計算
+    const data = {
+      ...rest,
+      pricePerTsubo: rest.pricePerTsubo ?? Math.round(rest.pricePerSqm * 3.30578 * 10) / 10,
+    };
     if (id) {
       await ctx.db.patch(id, data);
       return id;

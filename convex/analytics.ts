@@ -127,6 +127,13 @@ export const rebuildCache = mutation({
         const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
         const median = prices[Math.floor(prices.length / 2)];
 
+        // 坪単価（万円/坪）= 万円/m² × 3.30578
+        const tsuboPrices = inBucket
+          .map((t) => t.pricePerTsubo ?? t.pricePerSqm * 3.30578)
+          .sort((a, b) => a - b);
+        const avgTsubo = Math.round(tsuboPrices.reduce((a, b) => a + b, 0) / tsuboPrices.length * 10) / 10;
+        const medianTsubo = Math.round(tsuboPrices[Math.floor(tsuboPrices.length / 2)] * 10) / 10;
+
         // 新築比（各取引の物件の新築価格と比較）
         const ratios = inBucket
           .map((t) => {
@@ -152,6 +159,8 @@ export const rebuildCache = mutation({
           ward: ward ?? undefined,
           avgPricePerSqm: avg,
           medianPricePerSqm: median,
+          avgPricePerTsubo: avgTsubo,
+          medianPricePerTsubo: medianTsubo,
           avgPriceRatio: avgRatio,
           medianPriceRatio: medianRatio,
           sampleCount: inBucket.length,

@@ -22,6 +22,8 @@ type CachePoint = {
   sampleCount: number;
   avgPricePerSqm: number;
   medianPricePerSqm: number;
+  avgPricePerTsubo?: number;
+  medianPricePerTsubo?: number;
 };
 
 type Props = {
@@ -35,7 +37,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
       <p className="font-bold text-slate-900 mb-2">残存{label}年</p>
       {payload.map((p) => (
         <p key={p.name} style={{ color: p.color }}>
-          {p.name}: {p.name.includes("比率") ? `${(p.value * 100).toFixed(1)}%` : `${p.value.toFixed(1)}万円/m²`}
+          {p.name}: {p.name.includes("比率") ? `${(p.value * 100).toFixed(1)}%` : `${p.value.toFixed(1)}万円/坪`}
         </p>
       ))}
     </div>
@@ -78,9 +80,9 @@ export function AssetValueChart({ data }: Props) {
         </ResponsiveContainer>
       </div>
 
-      {/* 単価グラフ */}
+      {/* 坪単価グラフ */}
       <div>
-        <h3 className="text-base font-semibold text-slate-700 mb-1">残存年数別 平均成約単価（万円/m²）</h3>
+        <h3 className="text-base font-semibold text-slate-700 mb-1">残存年数別 平均坪単価（万円/坪）</h3>
         <p className="text-xs text-slate-400 mb-4">サンプル件数が少ないバケットはご参考程度にご覧ください</p>
         <ResponsiveContainer width="100%" height={280}>
           <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
@@ -92,8 +94,8 @@ export function AssetValueChart({ data }: Props) {
             <YAxis tickFormatter={(v) => `${v}万`} />
             <Tooltip content={<CustomTooltip />} />
             <Legend verticalAlign="top" />
-            <Bar dataKey="avgPricePerSqm" name="平均単価（万円/m²）" fill="#6ee7b7" radius={[3, 3, 0, 0]} />
-            <Line dataKey="medianPricePerSqm" name="中央値単価（万円/m²）" type="monotone" stroke="#059669" strokeWidth={2} dot={{ r: 4 }} />
+            <Bar dataKey="avgPricePerTsubo" name="平均坪単価（万円/坪）" fill="#6ee7b7" radius={[3, 3, 0, 0]} />
+            <Line dataKey="medianPricePerTsubo" name="中央値坪単価（万円/坪）" type="monotone" stroke="#059669" strokeWidth={2} dot={{ r: 4 }} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -105,8 +107,8 @@ export function AssetValueChart({ data }: Props) {
             <tr className="border-b">
               <th className="text-left py-2 font-medium">残存年数帯</th>
               <th className="text-right py-2 font-medium">サンプル数</th>
-              <th className="text-right py-2 font-medium">平均単価</th>
-              <th className="text-right py-2 font-medium">中央値単価</th>
+              <th className="text-right py-2 font-medium">平均坪単価</th>
+              <th className="text-right py-2 font-medium">中央値坪単価</th>
               <th className="text-right py-2 font-medium">新築比（中央値）</th>
             </tr>
           </thead>
@@ -115,8 +117,8 @@ export function AssetValueChart({ data }: Props) {
               <tr key={d.remainingYearsBucket} className="border-b last:border-0 hover:bg-slate-50">
                 <td className="py-2">{d.bucketMin}〜{d.bucketMax}年</td>
                 <td className="text-right py-2">{d.sampleCount}件</td>
-                <td className="text-right py-2">{d.avgPricePerSqm.toFixed(1)}万円</td>
-                <td className="text-right py-2">{d.medianPricePerSqm.toFixed(1)}万円</td>
+                <td className="text-right py-2">{(d.avgPricePerTsubo ?? d.avgPricePerSqm * 3.30578).toFixed(1)}万円/坪</td>
+                <td className="text-right py-2">{(d.medianPricePerTsubo ?? d.medianPricePerSqm * 3.30578).toFixed(1)}万円/坪</td>
                 <td className="text-right py-2">{(d.medianPriceRatio * 100).toFixed(1)}%</td>
               </tr>
             ))}
