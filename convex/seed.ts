@@ -736,6 +736,301 @@ export const seedTier3A = internalMutation({
   },
 });
 
+// Tier3B物件（10件）の物件マスタ + 新築価格 + SUUMO売り出し価格データ登録（2026年5月調査）
+export const seedTier3B = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const results: string[] = [];
+
+    const ensureProperty = async (prop: {
+      name: string; ward: string; address: string;
+      leaseStartYear: number; leaseTotalYears: number; buildingYear: number;
+      totalUnits: number; nearestStation?: string; walkMinutes?: number; notes?: string;
+    }) => {
+      const existing = await ctx.db
+        .query("properties")
+        .withSearchIndex("search_name", (q) => q.search("name", prop.name))
+        .collect();
+      const exact = existing.find((p) => p.name === prop.name);
+      if (exact) { results.push(`SKIP property: ${prop.name}（既存）`); return exact._id as string; }
+      const id = await ctx.db.insert("properties", prop);
+      results.push(`OK property: ${prop.name}`);
+      return id as string;
+    };
+
+    const insertListing = async (
+      propertyName: string, propertyId: string,
+      price: number, areaSqm: number, floor: number | undefined,
+      remainingLeaseYears: number, transactionYear: number, source: string,
+    ) => {
+      const existing = await ctx.db.query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", propertyId as never))
+        .filter((q) => q.and(q.eq(q.field("source"), source), q.eq(q.field("priceType"), "listing")))
+        .first();
+      if (existing) { results.push(`SKIP listing: ${propertyName} ${price}万`); return; }
+      const pricePerSqm = Math.round(price / areaSqm * 100) / 100;
+      const data: Record<string, unknown> = {
+        propertyId: propertyId as never,
+        transactionYearQ: `${transactionYear}Q2`, transactionYear,
+        price, areaSqm, remainingLeaseYears, pricePerSqm,
+        isNewConstruction: false, priceType: "listing", source,
+      };
+      if (floor !== undefined) data.floor = floor;
+      await ctx.db.insert("transactions", data as never);
+      results.push(`OK listing: ${propertyName} ${price}万（${areaSqm}m², 残${remainingLeaseYears}年）`);
+    };
+
+    const insertNewConst = async (
+      propertyName: string, propertyId: string,
+      transactionYear: number, price: number, areaSqm: number,
+      floor: number | undefined, remainingLeaseYears: number, source: string,
+    ) => {
+      const existing = await ctx.db.query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", propertyId as never))
+        .filter((q) => q.and(
+          q.eq(q.field("priceType"), "new_construction"),
+          q.eq(q.field("price"), price),
+          q.eq(q.field("areaSqm"), areaSqm),
+        ))
+        .first();
+      if (existing) { results.push(`SKIP nc: ${propertyName} ${price}万`); return; }
+      const pricePerSqm = Math.round(price / areaSqm * 100) / 100;
+      const data: Record<string, unknown> = {
+        propertyId: propertyId as never,
+        transactionYearQ: `${transactionYear}Q1`, transactionYear,
+        price, areaSqm, remainingLeaseYears, pricePerSqm,
+        isNewConstruction: true, priceType: "new_construction", source,
+      };
+      if (floor !== undefined) data.floor = floor;
+      await ctx.db.insert("transactions", data as never);
+      results.push(`OK nc: ${propertyName} ${price}万（${areaSqm}m², 残${remainingLeaseYears}年）`);
+    };
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3B-1: プラウド南麻布（港区, 竣工2013, 借地〜2073年）
+    // ──────────────────────────────────────────────────────────────────
+    const propProudMinami = await ensureProperty({
+      name: "プラウド南麻布",
+      ward: "港区",
+      address: "東京都港区南麻布4丁目",
+      leaseStartYear: 2013, leaseTotalYears: 60,
+      buildingYear: 2013, totalUnits: 88,
+      nearestStation: "広尾", walkMinutes: 7,
+      notes: "借地期限: 2073年12月。野村不動産・三井物産分譲。旧フランス大使館跡地。新築坪単価約422万円。",
+    });
+    // 新築: 平均坪単価422万円 → 76m²代表住戸
+    // pricePerSqm=422/3.30578=127.7, price=127.7*76.01=9706万 → 9700万
+    await insertNewConst("プラウド南麻布", propProudMinami, 2012, 9700, 76.01, undefined, 61,
+      "https://www.ienojikan.com/house/mansion/20120926.html");
+    // listings（残47年 = 2073-2026）
+    await insertListing("プラウド南麻布", propProudMinami, 26800, 77.52, 3, 47, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_76705391/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3B-2: グランスイート三軒茶屋スカイテラス（世田谷区, 竣工2014, 借地〜2064年）
+    // ──────────────────────────────────────────────────────────────────
+    const propGrandSuite = await ensureProperty({
+      name: "グランスイート三軒茶屋スカイテラス",
+      ward: "世田谷区",
+      address: "東京都世田谷区上馬1丁目",
+      leaseStartYear: 2014, leaseTotalYears: 50,
+      buildingYear: 2014, totalUnits: 52,
+      nearestStation: "駒沢大学", walkMinutes: 8,
+      notes: "借地期限: 2064年4月。丸紅分譲。地代月額5,060円（3年毎改定）。長谷工施工。",
+    });
+    // 新築価格: 公開データなし
+    // listings（残38年 = 2064-2026）
+    await insertListing("グランスイート三軒茶屋スカイテラス", propGrandSuite, 9999, 54.74, undefined, 38, 2026,
+      "https://suumo.jp/library/tf_13/sc_13112/to_1001859682/");
+    await insertListing("グランスイート三軒茶屋スカイテラス", propGrandSuite, 7480, 54.74, undefined, 38, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_setagaya/nc_75545755/");
+    await insertListing("グランスイート三軒茶屋スカイテラス", propGrandSuite, 7680, 54.74, undefined, 38, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_setagaya/nc_76181474/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3B-3: レ・ジェイドクロス千代田神保町（千代田区, 竣工2021, 借地〜2095年）
+    // ──────────────────────────────────────────────────────────────────
+    const propJade = await ensureProperty({
+      name: "レ・ジェイドクロス千代田神保町",
+      ward: "千代田区",
+      address: "東京都千代田区西神田2丁目",
+      leaseStartYear: 2022, leaseTotalYears: 73,
+      buildingYear: 2021, totalUnits: 50,
+      nearestStation: "神保町", walkMinutes: 4,
+      notes: "借地期限: 2095年5月16日。日本エスコン分譲。旧東方学会本館を保存・継承。新築坪単価平均611万円。",
+    });
+    // 新築: 平均坪単価611万円 → 65m²代表住戸（残73年 = 2095-2022）
+    // pricePerSqm=611/3.30578=184.8, price=184.8*65=12012万 → 12000万
+    await insertNewConst("レ・ジェイドクロス千代田神保町", propJade, 2022, 12000, 65.00, undefined, 73,
+      "https://sumai.es-conjapan.co.jp/jimbocho30/asset/index.html");
+    // listing（残69年 = 2095-2026）
+    await insertListing("レ・ジェイドクロス千代田神保町", propJade, 24000, 86.87, undefined, 69, 2026,
+      "https://suumo.jp/library/tf_13/sc_13101/to_1002488374/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3B-4: パークホームズ落合南長崎（豊島区, 竣工2017, 借地〜2089年）
+    // ──────────────────────────────────────────────────────────────────
+    const propOchiai = await ensureProperty({
+      name: "パークホームズ落合南長崎",
+      ward: "豊島区",
+      address: "東京都豊島区南長崎2丁目",
+      leaseStartYear: 2019, leaseTotalYears: 70,
+      buildingYear: 2017, totalUnits: 41,
+      nearestStation: "落合南長崎", walkMinutes: 9,
+      notes: "借地期限: 2089年1月。三井不動産レジデンシャル分譲。地主: NTT。都営大江戸線最寄り。",
+    });
+    // 新築（残72年 = 2089-2017）: 坪単価256〜296万円/坪
+    // Lタイプ1F 4700万 280万/坪: pricePerSqm=280/3.30578=84.7, areaSqm=4700/84.7=55.5
+    await insertNewConst("パークホームズ落合南長崎", propOchiai, 2017, 4700, 55.50, 1, 72,
+      "https://manmani.net/?p=8561");
+    // Hタイプ1F 5500万 256万/坪: pricePerSqm=256/3.30578=77.5, areaSqm=5500/77.5=71.0
+    await insertNewConst("パークホームズ落合南長崎", propOchiai, 2017, 5500, 71.00, 1, 72,
+      "https://manmani.net/?p=8561");
+    // Fタイプ5F 6100万 296万/坪: pricePerSqm=296/3.30578=89.6, areaSqm=6100/89.6=68.1
+    await insertNewConst("パークホームズ落合南長崎", propOchiai, 2017, 6100, 68.10, 5, 72,
+      "https://manmani.net/?p=8561");
+    // listing（残63年 = 2089-2026）
+    await insertListing("パークホームズ落合南長崎", propOchiai, 7980, 70.00, undefined, 63, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_77770804/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3B-5: サンクタスガーデン目黒（目黒区, 竣工2004, 借地〜2054年）
+    // ──────────────────────────────────────────────────────────────────
+    const propSanctusM = await ensureProperty({
+      name: "サンクタスガーデン目黒",
+      ward: "目黒区",
+      address: "東京都目黒区目黒2丁目13-32",
+      leaseStartYear: 2004, leaseTotalYears: 50,
+      buildingYear: 2004, totalUnits: 43,
+      nearestStation: "目黒", walkMinutes: 12,
+      notes: "借地期限: 2054年4月。ダイナセル・オリックスリアルエステート分譲。大林組施工。残存年数短め。",
+    });
+    // 新築価格: 公開データなし
+    // listings（残28年 = 2054-2026）
+    // areaSqm for 6580万: pricePerSqm=85.5 → areaSqm=6580/85.5=76.96
+    await insertListing("サンクタスガーデン目黒", propSanctusM, 6580, 76.96, undefined, 28, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_meguro/nc_20337905/");
+    await insertListing("サンクタスガーデン目黒", propSanctusM, 7299, 78.38, undefined, 28, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_meguro/nc_75285131/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3B-6: ウエリス渋谷本町（渋谷区, 竣工2016, 借地〜2087年）
+    // ──────────────────────────────────────────────────────────────────
+    const propUelis = await ensureProperty({
+      name: "ウエリス渋谷本町",
+      ward: "渋谷区",
+      address: "東京都渋谷区本町4丁目",
+      leaseStartYear: 2016, leaseTotalYears: 71,
+      buildingYear: 2016, totalUnits: 33,
+      nearestStation: "西新宿五丁目", walkMinutes: 8,
+      notes: "借地期限: 2087年1月31日。NTT都市開発分譲。地主: NTT。都営大江戸線最寄り。",
+    });
+    // 新築（残71年 = 2087-2016）: 11階56㎡ 5090万 坪単価301万円
+    await insertNewConst("ウエリス渋谷本町", propUelis, 2016, 5090, 56.04, 11, 71,
+      "https://manmani.net/?p=1348");
+    // listings（残61年 = 2087-2026）: areaSqm推定50m²（34.90〜56.04m²レンジの中央値）
+    await insertListing("ウエリス渋谷本町", propUelis, 6490, 50.00, undefined, 61, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_shibuya/nc_75731331/");
+    await insertListing("ウエリス渋谷本町", propUelis, 6277, 50.00, undefined, 61, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_shibuya/nc_77487895/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3B-7: プラウド神田駿河台（千代田区, 竣工2021, 借地〜2083年）
+    // ──────────────────────────────────────────────────────────────────
+    const propProudSurugadai = await ensureProperty({
+      name: "プラウド神田駿河台",
+      ward: "千代田区",
+      address: "東京都千代田区神田駿河台",
+      leaseStartYear: 2021, leaseTotalYears: 62,
+      buildingYear: 2021, totalUnits: 36,
+      nearestStation: "御茶ノ水", walkMinutes: 5,
+      notes: "借地期限: 2083年3月末。野村不動産分譲。竹中工務店施工。木造ハイブリッド高層。御茶ノ水駅徒歩5分。",
+    });
+    // 新築（残62年 = 2083-2021）: manmani.net データより
+    // Cタイプ52.62㎡ 各階: pricePerTsubo=545/565/586/609万円/坪
+    const surugadaiSrc = "https://manmani.net/?p=32421";
+    // 2F: pricePerSqm=545/3.30578=164.9, price=164.9*52.62=8675→8700
+    await insertNewConst("プラウド神田駿河台", propProudSurugadai, 2021, 8700, 52.62, 2, 62, surugadaiSrc);
+    // 4F: pricePerSqm=565/3.30578=170.9, price=170.9*52.62=8991→9000
+    await insertNewConst("プラウド神田駿河台", propProudSurugadai, 2021, 9000, 52.62, 4, 62, surugadaiSrc);
+    // 8F: pricePerSqm=586/3.30578=177.3, price=177.3*52.62=9326→9300
+    await insertNewConst("プラウド神田駿河台", propProudSurugadai, 2021, 9300, 52.62, 8, 62, surugadaiSrc);
+    // 10F: pricePerSqm=609/3.30578=184.2, price=184.2*52.62=9692→9700
+    await insertNewConst("プラウド神田駿河台", propProudSurugadai, 2021, 9700, 52.62, 10, 62, surugadaiSrc);
+    // Dタイプ79.66㎡:
+    // 12F: pricePerSqm=655/3.30578=198.1, price=198.1*79.66=15782→15800
+    await insertNewConst("プラウド神田駿河台", propProudSurugadai, 2021, 15800, 79.66, 12, 62, surugadaiSrc);
+    // 14F: pricePerSqm=697/3.30578=210.8, price=210.8*79.66=16792→16800
+    await insertNewConst("プラウド神田駿河台", propProudSurugadai, 2021, 16800, 79.66, 14, 62, surugadaiSrc);
+    // listing（残57年 = 2083-2026）
+    await insertListing("プラウド神田駿河台", propProudSurugadai, 14580, 52.62, undefined, 57, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_chiyoda/nc_78616027/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3B-8: リーベスト桜新町（世田谷区, 竣工2001, 借地〜2056年）
+    // ──────────────────────────────────────────────────────────────────
+    const propLiebest = await ensureProperty({
+      name: "リーベスト桜新町",
+      ward: "世田谷区",
+      address: "東京都世田谷区弦巻3丁目21-6",
+      leaseStartYear: 2001, leaseTotalYears: 55,
+      buildingYear: 2001, totalUnits: 37,
+      nearestStation: "桜新町", walkMinutes: 11,
+      notes: "借地期限: 2056年3月31日。住友石炭鉱業分譲。東急田園都市線最寄り。残存約30年。",
+    });
+    // 新築価格: 公開データなし
+    // listings（残30年 = 2056-2026）
+    await insertListing("リーベスト桜新町", propLiebest, 7990, 105.65, 6, 30, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_setagaya/nc_76497859/");
+    await insertListing("リーベスト桜新町", propLiebest, 4099, 59.52, undefined, 30, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_setagaya/nc_20101791/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3B-9: サンクタスガーデン砧（世田谷区, 竣工2005, 借地〜2056年）
+    // ──────────────────────────────────────────────────────────────────
+    const propSanctusK = await ensureProperty({
+      name: "サンクタスガーデン砧",
+      ward: "世田谷区",
+      address: "東京都世田谷区砧2丁目",
+      leaseStartYear: 2005, leaseTotalYears: 51,
+      buildingYear: 2005, totalUnits: 34,
+      nearestStation: "千歳船橋", walkMinutes: 11,
+      notes: "借地期限: 2056年3月8日。オリックス・リアルエステート分譲。東急コミュニティー管理。残存約30年。",
+    });
+    // 新築価格: 公開データなし
+    // listings（残30年 = 2056-2026）
+    await insertListing("サンクタスガーデン砧", propSanctusK, 4100, 70.00, undefined, 30, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_setagaya/nc_74780237/");
+    await insertListing("サンクタスガーデン砧", propSanctusK, 5100, 80.00, undefined, 30, 2025,
+      "https://t23m-navi.jp/indexes/d/4652 (上層階3LDK)");
+    await insertListing("サンクタスガーデン砧", propSanctusK, 5300, 80.00, undefined, 30, 2025,
+      "https://t23m-navi.jp/indexes/d/4652 (中層階3LDK)");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3B-10: Brillia大島 Green Avenue（江東区, 竣工2024, 借地〜2095年）
+    // ──────────────────────────────────────────────────────────────────
+    const propBrilliaGreen = await ensureProperty({
+      name: "Brillia大島 Green Avenue",
+      ward: "江東区",
+      address: "東京都江東区北砂5丁目",
+      leaseStartYear: 2022, leaseTotalYears: 73,
+      buildingYear: 2024, totalUnits: 64,
+      nearestStation: "大島", walkMinutes: 9,
+      notes: "借地期限: 2095年1月31日。東京建物分譲。都営新宿線最寄り。入居2025年1月。",
+    });
+    // 新築（第1期 2022〜2023年販売）: 坪単価268〜284万円/坪
+    // areaSqm=70.29, 268万/坪: pricePerSqm=81.07, price=81.07*70.29=5699→5700, 残73年=2095-2022
+    await insertNewConst("Brillia大島 Green Avenue", propBrilliaGreen, 2022, 5700, 70.29, undefined, 73,
+      "https://manmani.net/?p=51200");
+    // areaSqm=70.29, 284万/坪: pricePerSqm=85.91, price=85.91*70.29=6039→6040, 残72年=2095-2023
+    await insertNewConst("Brillia大島 Green Avenue", propBrilliaGreen, 2023, 6040, 70.29, undefined, 72,
+      "https://manmani.net/?p=51200");
+    // 中古流通なし（入居2025年1月の新物件）
+
+    return results;
+  },
+});
+
 // Tier2物件の新築価格 + SUUMO売り出し価格データ登録（2026年5月調査）
 export const seedTier2 = internalMutation({
   args: {},
