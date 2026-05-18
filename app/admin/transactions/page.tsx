@@ -49,9 +49,16 @@ export default function TransactionsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${t.isNewConstruction ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"}`}>
-                      {t.isNewConstruction ? "新築" : "中古"}
-                    </span>
+                    {(() => {
+                      const pt = t.priceType ?? (t.isNewConstruction ? "new_construction" : "transaction");
+                      const map: Record<string, { label: string; cls: string }> = {
+                        new_construction: { label: "新築価格", cls: "bg-blue-100 text-blue-700" },
+                        listing:          { label: "売り出し", cls: "bg-amber-100 text-amber-700" },
+                        transaction:      { label: "成約価格", cls: "bg-green-100 text-green-700" },
+                      };
+                      const { label, cls } = map[pt] ?? { label: pt, cls: "bg-slate-100 text-slate-600" };
+                      return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{label}</span>;
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <button

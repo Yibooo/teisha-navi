@@ -30,6 +30,11 @@ export const upsert = mutation({
     remainingLeaseYears: v.number(),
     pricePerSqm: v.number(),
     isNewConstruction: v.boolean(),
+    priceType: v.optional(v.union(
+      v.literal("new_construction"),
+      v.literal("listing"),
+      v.literal("transaction"),
+    )),
     source: v.string(),
   },
   handler: async (ctx, args) => {
@@ -55,8 +60,13 @@ export const getStats = query({
     const all = await ctx.db.query("transactions").collect();
     return {
       total: all.length,
-      newConstruction: all.filter((t) => t.isNewConstruction).length,
-      resale: all.filter((t) => !t.isNewConstruction).length,
+      newConstruction: all.filter((t) =>
+        t.priceType === "new_construction" || t.isNewConstruction
+      ).length,
+      listing: all.filter((t) => t.priceType === "listing").length,
+      transaction: all.filter((t) =>
+        t.priceType === "transaction" || (!t.isNewConstruction && !t.priceType)
+      ).length,
     };
   },
 });

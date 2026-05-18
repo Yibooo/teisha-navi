@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
         remainingLeaseYears,
         pricePerSqm: Math.round((price / areaSqm) * 10) / 10,
         isNewConstruction: false,
+        priceType: "transaction",
         source: "国土交通省不動産取引価格情報（CSV）",
       });
       result.imported++;

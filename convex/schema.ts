@@ -23,13 +23,22 @@ export default defineSchema({
     propertyId: v.id("properties"),   // 物件マスタへの参照
     transactionYearQ: v.string(),      // 取引時期（例: 2023Q3）
     transactionYear: v.number(),       // 取引年（計算用）
-    price: v.number(),                 // 成約価格（万円）
+    price: v.number(),                 // 価格（万円）
     areaSqm: v.number(),               // 専有面積（m²）
     floor: v.optional(v.number()),     // 階数
     remainingLeaseYears: v.number(),   // 残存借地権年数（計算値）
     pricePerSqm: v.number(),           // 単価（万円/m²）
-    isNewConstruction: v.boolean(),    // 新築フラグ
-    source: v.string(),               // データソース
+    isNewConstruction: v.boolean(),    // 新築フラグ（後方互換）
+    // priceType: 価格種別
+    //   "new_construction" = 新築売り出し価格（STEP1）
+    //   "listing"          = 中古売り出し価格・SUUMO等（STEP2）
+    //   "transaction"      = 実際の成約価格・国交省等（STEP3）
+    priceType: v.optional(v.union(
+      v.literal("new_construction"),
+      v.literal("listing"),
+      v.literal("transaction"),
+    )),
+    source: v.string(),               // データソース（URL含む）
   })
     .index("by_property", ["propertyId"])
     .index("by_remaining_years", ["remainingLeaseYears"])
