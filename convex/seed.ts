@@ -389,6 +389,353 @@ export const seedTier1Listings = internalMutation({
   },
 });
 
+// Tier3A物件（10件）の物件マスタ + 新築価格 + SUUMO売り出し価格データ登録（2026年5月調査）
+export const seedTier3A = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const results: string[] = [];
+
+    // ── ヘルパー ───────────────────────────────────────────────────────
+    const ensureProperty = async (prop: {
+      name: string; ward: string; address: string;
+      leaseStartYear: number; leaseTotalYears: number; buildingYear: number;
+      totalUnits: number; nearestStation?: string; walkMinutes?: number; notes?: string;
+    }) => {
+      const existing = await ctx.db
+        .query("properties")
+        .withSearchIndex("search_name", (q) => q.search("name", prop.name))
+        .collect();
+      const exact = existing.find((p) => p.name === prop.name);
+      if (exact) {
+        results.push(`SKIP property: ${prop.name}（既存）`);
+        return exact._id as string;
+      }
+      const id = await ctx.db.insert("properties", prop);
+      results.push(`OK property: ${prop.name}`);
+      return id as string;
+    };
+
+    const insertListing = async (
+      propertyName: string,
+      propertyId: string,
+      price: number,
+      areaSqm: number,
+      floor: number | undefined,
+      remainingLeaseYears: number,
+      transactionYear: number,
+      source: string,
+    ) => {
+      const existing = await ctx.db
+        .query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", propertyId as never))
+        .filter((q) =>
+          q.and(q.eq(q.field("source"), source), q.eq(q.field("priceType"), "listing"))
+        )
+        .first();
+      if (existing) { results.push(`SKIP listing: ${propertyName} ${price}万`); return; }
+      const pricePerSqm = Math.round(price / areaSqm * 100) / 100;
+      const data: Record<string, unknown> = {
+        propertyId: propertyId as never,
+        transactionYearQ: `${transactionYear}Q2`,
+        transactionYear,
+        price, areaSqm,
+        remainingLeaseYears, pricePerSqm,
+        isNewConstruction: false, priceType: "listing", source,
+      };
+      if (floor !== undefined) data.floor = floor;
+      await ctx.db.insert("transactions", data as never);
+      results.push(`OK listing: ${propertyName} ${price}万（${areaSqm}m², 残${remainingLeaseYears}年）`);
+    };
+
+    const insertNewConst = async (
+      propertyName: string,
+      propertyId: string,
+      transactionYear: number,
+      price: number,
+      areaSqm: number,
+      floor: number | undefined,
+      remainingLeaseYears: number,
+      source: string,
+    ) => {
+      // 同一物件 + 同一年 + 同一pricePerSqm で重複チェック
+      const pricePerSqm = Math.round(price / areaSqm * 100) / 100;
+      const existing = await ctx.db
+        .query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", propertyId as never))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("priceType"), "new_construction"),
+            q.eq(q.field("price"), price),
+            q.eq(q.field("areaSqm"), areaSqm),
+          )
+        )
+        .first();
+      if (existing) { results.push(`SKIP nc: ${propertyName} ${price}万`); return; }
+      const data: Record<string, unknown> = {
+        propertyId: propertyId as never,
+        transactionYearQ: `${transactionYear}Q1`,
+        transactionYear, price, areaSqm,
+        remainingLeaseYears, pricePerSqm,
+        isNewConstruction: true, priceType: "new_construction", source,
+      };
+      if (floor !== undefined) data.floor = floor;
+      await ctx.db.insert("transactions", data as never);
+      results.push(`OK nc: ${propertyName} ${price}万（${areaSqm}m², 残${remainingLeaseYears}年）`);
+    };
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3A-1: ブリリアシティ西早稲田（豊島区, 竣工2022, 借地〜2092年）
+    // ──────────────────────────────────────────────────────────────────
+    const propBrilliaW = await ensureProperty({
+      name: "ブリリアシティ西早稲田",
+      ward: "豊島区",
+      address: "東京都豊島区高田1丁目",
+      leaseStartYear: 2020, leaseTotalYears: 72,
+      buildingYear: 2022, totalUnits: 454,
+      nearestStation: "面影橋", walkMinutes: 1,
+      notes: "借地期限: 2092年5月31日。東京建物分譲。都電荒川線最寄り。",
+    });
+    const srcBW = "https://manmani.net/?p=32142";
+    await insertNewConst("ブリリアシティ西早稲田", propBrilliaW, 2020, 5900, 71.48, 3, 72, srcBW);
+    await insertNewConst("ブリリアシティ西早稲田", propBrilliaW, 2020, 6400, 71.48, 8, 72, srcBW);
+    await insertNewConst("ブリリアシティ西早稲田", propBrilliaW, 2020, 7200, 71.48, 13, 72, srcBW);
+    await insertNewConst("ブリリアシティ西早稲田", propBrilliaW, 2020, 7300, 82.13, 3, 72, srcBW);
+    await insertNewConst("ブリリアシティ西早稲田", propBrilliaW, 2020, 7200, 71.69, 8, 72, srcBW);
+    // listings（残66年 = 2092-2026）
+    const bwListings: [number, number, number | undefined, string][] = [
+      [9980, 72.16, 6, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_79042055/"],
+      [9980, 71.69, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20427548/"],
+      [10190, 72.05, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20629149/"],
+      [10260, 72.16, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20537715/"],
+      [10340, 71.77, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20812078/"],
+      [10580, 72.17, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_78707732/"],
+      [10780, 72.16, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20345314/"],
+      [10780, 72.16, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20538450/"],
+      [11500, 72.05, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20737139/"],
+      [11500, 71.69, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20321996/"],
+    ];
+    for (const [p, a, f, s] of bwListings) await insertListing("ブリリアシティ西早稲田", propBrilliaW, p, a, f, 66, 2026, s);
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3A-2: ブリリアシティ三鷹（練馬区, 竣工2019, 借地〜2087年）
+    // ──────────────────────────────────────────────────────────────────
+    const propBrilliaM = await ensureProperty({
+      name: "ブリリアシティ三鷹",
+      ward: "練馬区",
+      address: "東京都練馬区関町南4丁目",
+      leaseStartYear: 2017, leaseTotalYears: 70,
+      buildingYear: 2019, totalUnits: 436,
+      nearestStation: "武蔵関", walkMinutes: 16,
+      notes: "借地期限: 2087年12月29日。東京建物・住友商事分譲。西武新宿線最寄り。",
+    });
+    const srcBM = "https://manmani.net/?p=12880";
+    // 残68年 = 2087-2019
+    await insertNewConst("ブリリアシティ三鷹", propBrilliaM, 2019, 4400, 71.47, 2, 68, srcBM);
+    await insertNewConst("ブリリアシティ三鷹", propBrilliaM, 2019, 5300, 73.79, 5, 68, srcBM);
+    await insertNewConst("ブリリアシティ三鷹", propBrilliaM, 2019, 3900, 70.98, 2, 68, srcBM);
+    await insertNewConst("ブリリアシティ三鷹", propBrilliaM, 2019, 4300, 74.00, 2, 68, srcBM);
+    // listings（残61年 = 2087-2026）
+    await insertListing("ブリリアシティ三鷹", propBrilliaM, 6480, 71.47, undefined, 61, 2026, "https://suumo.jp/ms/chuko/tokyo/sc_nerima/nc_77876341/");
+    await insertListing("ブリリアシティ三鷹", propBrilliaM, 7780, 87.75, undefined, 61, 2026, "https://suumo.jp/ms/chuko/tokyo/sc_nerima/nc_96315991/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3A-3: リビオシティ南砂町ステーションサイト（江東区, 竣工2023, 借地〜2085年）
+    // ──────────────────────────────────────────────────────────────────
+    const propLivio = await ensureProperty({
+      name: "リビオシティ南砂町ステーションサイト",
+      ward: "江東区",
+      address: "東京都江東区南砂",
+      leaseStartYear: 2023, leaseTotalYears: 62,
+      buildingYear: 2023, totalUnits: 361,
+      nearestStation: "南砂町",
+      notes: "借地期限: 2085年9月30日。日鉄興和不動産分譲。東京メトロ東西線最寄り。",
+    });
+    const srcLV = "https://manmani.net/?p=39206";
+    // 残63年 = 2085-2022（先行販売は2022年）
+    await insertNewConst("リビオシティ南砂町SS", propLivio, 2022, 5978, 72.45, 1, 63, srcLV);
+    await insertNewConst("リビオシティ南砂町SS", propLivio, 2022, 5998, 72.45, 4, 63, srcLV);
+    await insertNewConst("リビオシティ南砂町SS", propLivio, 2022, 6268, 72.45, 9, 63, srcLV);
+    await insertNewConst("リビオシティ南砂町SS", propLivio, 2022, 6398, 72.45, 12, 63, srcLV);
+    // 中古流通なし（2023年竣工の新しい物件）
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3A-4: ジオ板橋大山（板橋区, 竣工2025, 借地〜2098年）
+    // ──────────────────────────────────────────────────────────────────
+    const propGeo = await ensureProperty({
+      name: "ジオ板橋大山",
+      ward: "板橋区",
+      address: "東京都板橋区仲町",
+      leaseStartYear: 2026, leaseTotalYears: 72,
+      buildingYear: 2025, totalUnits: 285,
+      nearestStation: "大山", walkMinutes: 6,
+      notes: "借地期限: 2098年7月31日。阪急阪神不動産分譲。東武東上線最寄り。",
+    });
+    const srcGeo = "https://manmani.net/?p=52584";
+    // 残72年 = 2098-2026
+    await insertNewConst("ジオ板橋大山", propGeo, 2026, 5990, 68.42, 1, 72, srcGeo);
+    await insertNewConst("ジオ板橋大山", propGeo, 2026, 7090, 70.86, 5, 72, srcGeo);
+    await insertNewConst("ジオ板橋大山", propGeo, 2026, 7890, 78.96, 3, 72, srcGeo);
+    await insertNewConst("ジオ板橋大山", propGeo, 2026, 9990, 87.85, 9, 72, srcGeo);
+    await insertNewConst("ジオ板橋大山", propGeo, 2026, 4990, 56.10, 1, 72, srcGeo);
+    // 2026年現在も新築販売中（中古売り出しなし）
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3A-5: ブリリアタワー大崎（品川区, 竣工2007, 借地〜2078年）
+    // ──────────────────────────────────────────────────────────────────
+    const propBrilliaOsaki = await ensureProperty({
+      name: "ブリリアタワー大崎",
+      ward: "品川区",
+      address: "東京都品川区大崎1丁目",
+      leaseStartYear: 2007, leaseTotalYears: 71,
+      buildingYear: 2007, totalUnits: 238,
+      nearestStation: "大崎", walkMinutes: 4,
+      notes: "借地期限: 2078年11月。東京建物分譲。JR山手線等最寄り。新築坪単価約450万円。",
+    });
+    // 新築時: 坪単価約450万円（平均）→ 70m²の代表住戸で推定
+    // pricePerSqm=450/3.30578=136, price=136*70=9520万
+    await insertNewConst("ブリリアタワー大崎", propBrilliaOsaki, 2007, 9520, 70.00, undefined, 71,
+      "https://emoto.tokyo/journal/brilliatower-ohsaki");
+    // listing（残52年 = 2078-2026）
+    await insertListing("ブリリアタワー大崎", propBrilliaOsaki, 15080, 81.01, 24, 52, 2026,
+      "https://suumo.jp/ms/chuko/tokyo/sc_shinagawa/nc_20636708/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3A-6: ザ・パークハウス市谷加賀町レジデンス（新宿区, 竣工2021, 借地〜2091年）
+    // ──────────────────────────────────────────────────────────────────
+    const propIchigaya = await ensureProperty({
+      name: "ザ・パークハウス市谷加賀町レジデンス",
+      ward: "新宿区",
+      address: "東京都新宿区市谷加賀町1丁目",
+      leaseStartYear: 2021, leaseTotalYears: 70,
+      buildingYear: 2021, totalUnits: 228,
+      nearestStation: "牛込柳町", walkMinutes: 6,
+      notes: "借地期限: 2091年11月1日。三菱地所レジデンス分譲。都営大江戸線最寄り。新築坪単価370〜480万円。",
+    });
+    const srcIchi = "https://manmani.net/?p=30171";
+    // 残70年 = 2091-2021
+    await insertNewConst("パークハウス市谷加賀町", propIchigaya, 2021, 8000, 66.00, 4, 70, srcIchi);
+    await insertNewConst("パークハウス市谷加賀町", propIchigaya, 2021, 10000, 70.75, 6, 70, srcIchi);
+    await insertNewConst("パークハウス市谷加賀町", propIchigaya, 2021, 16000, 110.08, 8, 70, srcIchi);
+    // listings（残65年 = 2091-2026）
+    await insertListing("パークハウス市谷加賀町", propIchigaya, 11980, 60.37, 3, 65, 2026, "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_20774395/");
+    await insertListing("パークハウス市谷加賀町", propIchigaya, 12800, 66.00, undefined, 65, 2026, "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_20650693/");
+    await insertListing("パークハウス市谷加賀町", propIchigaya, 14480, 77.55, undefined, 65, 2026, "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_20570820/");
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3A-7: ブリリアタワー品川シーサイド（品川区, 竣工2006, 借地〜2057年）
+    // ──────────────────────────────────────────────────────────────────
+    const propBrilliaSS = await ensureProperty({
+      name: "ブリリアタワー品川シーサイド",
+      ward: "品川区",
+      address: "東京都品川区東品川4丁目13-24",
+      leaseStartYear: 2004, leaseTotalYears: 53,
+      buildingYear: 2006, totalUnits: 187,
+      nearestStation: "品川シーサイド", walkMinutes: 2,
+      notes: "借地期限: 2057年5月17日。東京建物分譲。りんかい線最寄り。残存期間短め。",
+    });
+    // 2011年二次流通事例（新築後の最古公開データ）、残46年 = 2057-2011
+    await insertListing("ブリリアタワー品川シーサイド", propBrilliaSS, 3450, 58.90, 16, 46, 2011,
+      "https://mansion-madori.com/blog-entry-173.html");
+    // 2026年現在の売り出し（残31年 = 2057-2026）
+    const ssListings: [number, number, string][] = [
+      [5180, 58.85, "https://suumo.jp/ms/chuko/tokyo/sc_shinagawa/nc_20848292/"],
+      [5180, 58.85, "https://suumo.jp/ms/chuko/tokyo/sc_shinagawa/nc_20774369/"],
+      [5900, 60.76, "https://suumo.jp/ms/chuko/tokyo/sc_shinagawa/nc_20726165/"],
+      // ※ 9800万の2件は権利金（前払い地代）込みのため除外
+    ];
+    for (const [p, a, s] of ssListings) await insertListing("ブリリアタワー品川シーサイド", propBrilliaSS, p, a, undefined, 31, 2026, s);
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3A-8: パークタワー西新宿エムズポート（新宿区, 竣工2014, 借地〜2084年）
+    // ──────────────────────────────────────────────────────────────────
+    const propPTW = await ensureProperty({
+      name: "パークタワー西新宿エムズポート",
+      ward: "新宿区",
+      address: "東京都新宿区西新宿8丁目14-27",
+      leaseStartYear: 2014, leaseTotalYears: 70,
+      buildingYear: 2014, totalUnits: 179,
+      nearestStation: "西新宿", walkMinutes: 3,
+      notes: "借地期限: 2084年11月29日。三井不動産レジデンシャル分譲。東京メトロ丸ノ内線最寄り。新築坪単価442万円。",
+    });
+    // 新築: 坪単価442万円 → 70m²代表住戸で推定
+    // pricePerSqm=442/3.30578=133.7, price=133.7*70=9359万
+    await insertNewConst("パークタワー西新宿エムズポート", propPTW, 2013, 9360, 70.00, undefined, 70,
+      "https://www.mansion-review.jp/mansion/535634.html");
+    // listings（残58年 = 2084-2026）
+    const ptwListings: [number, number, number | undefined, string][] = [
+      [7480, 38.51, 13, "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_20076755/"],
+      [10480, 57.34, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_20543722/"],
+      [16500, 74.64, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_20697075/"],
+      [16500, 74.64, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_20695502/"],
+      [16500, 74.64, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_20718709/"],
+      [16500, 74.64, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_20631916/"],
+    ];
+    for (const [p, a, f, s] of ptwListings) await insertListing("パークタワー西新宿エムズポート", propPTW, p, a, f, 58, 2026, s);
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3A-9: 麻布台パークハウス（港区, 竣工2010, 借地〜2062年）
+    // ──────────────────────────────────────────────────────────────────
+    const propAzabudai = await ensureProperty({
+      name: "麻布台パークハウス",
+      ward: "港区",
+      address: "東京都港区麻布台2丁目1-2",
+      leaseStartYear: 2010, leaseTotalYears: 52,
+      buildingYear: 2010, totalUnits: 165,
+      nearestStation: "麻布十番", walkMinutes: 6,
+      notes: "借地期限: 2062年3月10日。三菱地所分譲。都営大江戸線・東京メトロ南北線最寄り。新築坪単価約561万円。",
+    });
+    // 新築: 坪単価561万円 → 70m²代表住戸で推定
+    // pricePerSqm=561/3.30578=169.8, price=169.8*70=11886万 → 11900万
+    await insertNewConst("麻布台パークハウス", propAzabudai, 2010, 11900, 70.00, undefined, 52,
+      "https://mansion-market.com/mansions/detail/1400");
+    // listings（残36年 = 2062-2026）
+    const azListings: [number, number, number | undefined, string][] = [
+      [16500, 45.44, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_78967548/"],
+      [21980, 62.01, 6, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20279309/"],
+      [21980, 62.01, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_76964109/"],
+      [35200, 84.30, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20538703/"],
+      [36800, 88.38, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_78965100/"],
+      [38000, 94.68, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20759526/"],
+      [46500, 126.31, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20751710/"],
+      [46500, 126.31, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_78328154/"],
+      [49800, 129.71, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_78435961/"],
+      [49800, 129.71, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_78441610/"],
+      [54800, 119.63, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20766821/"],
+      [55500, 126.82, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20625942/"],
+      [75800, 163.35, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_minato/nc_20617409/"],
+    ];
+    for (const [p, a, f, s] of azListings) await insertListing("麻布台パークハウス", propAzabudai, p, a, f, 36, 2026, s);
+
+    // ──────────────────────────────────────────────────────────────────
+    // T3A-10: 桜プレイス（豊島区, 竣工2012, 借地〜2062年）
+    // ──────────────────────────────────────────────────────────────────
+    const propSakura = await ensureProperty({
+      name: "桜プレイス",
+      ward: "豊島区",
+      address: "東京都豊島区高田2丁目4-22",
+      leaseStartYear: 2012, leaseTotalYears: 50,
+      buildingYear: 2012, totalUnits: 149,
+      nearestStation: "学習院下", walkMinutes: 3,
+      notes: "借地期限: 2062年6月〜8月頃。鹿島建設設計・施工。都電荒川線最寄り。新築坪単価約248万円。",
+    });
+    // 新築: 坪単価248万円 → 70m²代表住戸で推定
+    // pricePerSqm=248/3.30578=75.0, price=75.0*70=5250万
+    await insertNewConst("桜プレイス", propSakura, 2012, 5250, 70.00, undefined, 50,
+      "https://mansion-market.com/mansions/detail/9618");
+    // listings（残36年 = 2062-2026）
+    const sakuraListings: [number, number, number | undefined, string][] = [
+      [7980, 86.94, 3, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_78737098/"],
+      [8800, 86.94, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20661532/"],
+      [8800, 86.94, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20726617/"],
+      [8800, 86.94, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20601929/"],
+      [8800, 86.94, undefined, "https://suumo.jp/ms/chuko/tokyo/sc_toshima/nc_20657156/"],
+    ];
+    for (const [p, a, f, s] of sakuraListings) await insertListing("桜プレイス", propSakura, p, a, f, 36, 2026, s);
+
+    return results;
+  },
+});
+
 // Tier2物件の新築価格 + SUUMO売り出し価格データ登録（2026年5月調査）
 export const seedTier2 = internalMutation({
   args: {},
