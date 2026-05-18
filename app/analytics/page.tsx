@@ -29,6 +29,10 @@ export default function AnalyticsPage() {
 
   const txStats = useQuery(api.transactions.getStats, {});
 
+  const propertiesWithData = useQuery(api.analytics.getPropertiesWithDataCounts, {
+    ward: selectedWard === "all" ? undefined : selectedWard,
+  });
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
       <div className="mb-8">
@@ -54,7 +58,6 @@ export default function AnalyticsPage() {
               )}
             </>
           )}
-          <Badge variant="outline">出典: SUUMO（売り出し価格ベース）</Badge>
         </div>
         {txStats && txStats.transaction === 0 && (
           <p className="text-xs text-amber-600 mt-2">
@@ -92,6 +95,93 @@ export default function AnalyticsPage() {
         )}
       </div>
 
+      {/* 対象物件一覧 */}
+      <div className="bg-white rounded-2xl border border-slate-200 mb-8 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h2 className="font-semibold text-slate-900">
+            対象物件一覧
+            {propertiesWithData && (
+              <span className="ml-2 text-sm font-normal text-slate-500">
+                （{selectedWard === "all" ? "東京23区 全体" : selectedWard}・{propertiesWithData.length}件）
+              </span>
+            )}
+          </h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium text-slate-600">マンション名</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-600">区</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-600">竣工</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-600">借地期限</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-600">残存年数</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-600">総戸数</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-600">最寄駅</th>
+                <th className="text-center px-4 py-3 font-medium text-slate-600">データ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {propertiesWithData === undefined ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-6 text-center text-slate-400 text-sm">読み込み中...</td>
+                </tr>
+              ) : propertiesWithData.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-6 text-center text-slate-400 text-sm">
+                    {selectedWard === "all" ? "物件データがありません" : `${selectedWard}の物件データがありません`}
+                  </td>
+                </tr>
+              ) : (
+                propertiesWithData.map((p) => (
+                  <tr key={p._id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-slate-900">{p.name}</td>
+                    <td className="px-4 py-3 text-slate-600">{p.ward}</td>
+                    <td className="px-4 py-3 text-right text-slate-600">{p.buildingYear}年</td>
+                    <td className="px-4 py-3 text-right text-slate-600">{p.leaseEndYear}年</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={
+                        p.remainingYears < 25 ? "text-red-600 font-semibold" :
+                        p.remainingYears < 35 ? "text-amber-600 font-medium" :
+                        "text-slate-700"
+                      }>
+                        {p.remainingYears}年
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-600">{p.totalUnits ?? "—"}戸</td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {p.nearestStation ? `${p.nearestStation}駅 徒歩${p.walkMinutes}分` : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1 flex-wrap">
+                        {p.dataNew > 0 && (
+                          <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
+                            新築{p.dataNew}
+                          </span>
+                        )}
+                        {p.dataListing > 0 && (
+                          <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
+                            売出{p.dataListing}
+                          </span>
+                        )}
+                        {p.dataTransaction > 0 && (
+                          <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
+                            成約{p.dataTransaction}
+                          </span>
+                        )}
+                        {p.dataNew === 0 && p.dataListing === 0 && p.dataTransaction === 0 && (
+                          <span className="text-xs text-slate-300">—</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* 解説 */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
@@ -99,7 +189,7 @@ export default function AnalyticsPage() {
           <ul className="text-sm text-blue-800 space-y-1 leading-relaxed">
             <li>• 横軸：残存借地権年数</li>
             <li>• 縦軸（上段）：新築時価格を100%とした場合の比率</li>
-            <li>• 縦軸（下段）：成約単価（万円/m²）</li>
+            <li>• 縦軸（下段）：坪単価（万円/坪）</li>
             <li>• サンプル数が少ないバケットは参考値として参照ください</li>
           </ul>
         </div>

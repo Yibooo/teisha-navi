@@ -67,6 +67,46 @@ export const getRawTransactions = query({
   },
 });
 
+// グラフ対象物件一覧（データ件数付き）
+export const getPropertiesWithDataCounts = query({
+  args: { ward: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const properties = await ctx.db.query("properties").collect();
+    const filtered = args.ward
+      ? properties.filter((p) => p.ward === args.ward)
+      : properties;
+
+    const allTx = await ctx.db.query("transactions").collect();
+    const currentYear = 2026;
+
+    return filtered
+      .map((p) => {
+        const propTx = allTx.filter((t) => t.propertyId === p._id);
+        const leaseEndYear = p.leaseStartYear + p.leaseTotalYears;
+        return {
+          _id: p._id,
+          name: p.name,
+          ward: p.ward,
+          buildingYear: p.buildingYear,
+          leaseEndYear,
+          remainingYears: leaseEndYear - currentYear,
+          totalUnits: p.totalUnits,
+          nearestStation: p.nearestStation,
+          walkMinutes: p.walkMinutes,
+          dataNew: propTx.filter((t) =>
+            t.priceType === "new_construction" || t.isNewConstruction
+          ).length,
+          dataListing: propTx.filter((t) => t.priceType === "listing").length,
+          dataTransaction: propTx.filter((t) =>
+            t.priceType === "transaction" ||
+            (!t.isNewConstruction && !t.priceType)
+          ).length,
+        };
+      })
+      .sort((a, b) => (b.totalUnits ?? 0) - (a.totalUnits ?? 0));
+  },
+});
+
 // キャッシュ再構築（Admin から呼ぶ）
 export const rebuildCache = mutation({
   args: {},
