@@ -388,3 +388,125 @@ export const seedTier1Listings = internalMutation({
     return results;
   },
 });
+
+// Tier2物件の新築価格 + SUUMO売り出し価格データ登録（2026年5月調査）
+export const seedTier2 = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // ─── 新築価格（STEP1）───────────────────────────────────────────
+    const newPrices = [
+      {
+        // 銀座タワー: 分譲時坪単価約252万（成約履歴から逆算）
+        propertyId: "j97cc0e4ajz179x3qwzd2a2gy586zm2h",
+        propertyName: "銀座タワー",
+        transactionYear: 2003, q: 2,
+        price: 5640, areaSqm: 74, pricePerSqm: 76.2,
+        remainingLeaseYears: 50, // 2053-2003
+        source: "https://mansion-market.com/mansions/detail/251",
+      },
+      {
+        // パークコート神楽坂: 2009年11月販売開始 坪単価346〜350万
+        propertyId: "j977znsqegt1qxbq9h1z4x7sg186zjek",
+        propertyName: "パークコート神楽坂",
+        transactionYear: 2009, q: 4,
+        price: 8260, areaSqm: 79, pricePerSqm: 104.6,
+        remainingLeaseYears: 74, // 2083-2009
+        source: "https://www.mitsuifudosan.co.jp/corporate/news/2009/1104_01/",
+      },
+      {
+        // パークホームズ月島二丁目: 2019年 最多6,000万台 坪単価約345万
+        propertyId: "j975m61wenq27kbz00qj1er9qd86yvf9",
+        propertyName: "パークホームズ月島二丁目",
+        transactionYear: 2019, q: 2,
+        price: 6500, areaSqm: 62, pricePerSqm: 104.8,
+        remainingLeaseYears: 50, // 2069-2019
+        source: "https://manmani.net/?p=29754",
+      },
+      {
+        // パークコート三番町ハウス: 2025年第3期 坪単価約1,075万
+        propertyId: "j9796wxjyxxcyynmyxhecjeved86z6v6",
+        propertyName: "パークコート ザ・三番町ハウス",
+        transactionYear: 2025, q: 3,
+        price: 19000, areaSqm: 57, pricePerSqm: 333.3,
+        remainingLeaseYears: 72, // 2097-2025
+        source: "https://manmani.net/?p=58703",
+      },
+    ];
+
+    // ─── SUUMO売り出し価格（STEP2）──────────────────────────────────
+    const listings = [
+      // 銀座タワー（残27年 = 2053-2026）
+      { propertyName: "銀座タワー", propertyId: "j97cc0e4ajz179x3qwzd2a2gy586zm2h",
+        price: 11480, areaSqm: 73.81, floor: 7,
+        pricePerSqm: Math.round(11480 / 73.81 * 10) / 10, remainingLeaseYears: 27,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_chuo/nc_78661771/" },
+      { propertyName: "銀座タワー", propertyId: "j97cc0e4ajz179x3qwzd2a2gy586zm2h",
+        price: 15000, areaSqm: 94.14, floor: 20,
+        pricePerSqm: Math.round(15000 / 94.14 * 10) / 10, remainingLeaseYears: 27,
+        source: "https://sumikae.ttfuhan.co.jp/mansion/TAP250001/" },
+      // パークコート神楽坂（残57年 = 2083-2026）
+      { propertyName: "パークコート神楽坂", propertyId: "j977znsqegt1qxbq9h1z4x7sg186zjek",
+        price: 20480, areaSqm: 85.97, floor: 4,
+        pricePerSqm: Math.round(20480 / 85.97 * 10) / 10, remainingLeaseYears: 57,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_76325368/" },
+      { propertyName: "パークコート神楽坂", propertyId: "j977znsqegt1qxbq9h1z4x7sg186zjek",
+        price: 26980, areaSqm: 93.96, floor: 3,
+        pricePerSqm: Math.round(26980 / 93.96 * 10) / 10, remainingLeaseYears: 57,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_shinjuku/nc_77423545/" },
+      // パークホームズ月島二丁目（残43年 = 2069-2026）
+      { propertyName: "パークホームズ月島二丁目", propertyId: "j975m61wenq27kbz00qj1er9qd86yvf9",
+        price: 9280, areaSqm: 54.66, floor: 3,
+        pricePerSqm: Math.round(9280 / 54.66 * 10) / 10, remainingLeaseYears: 43,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_chuo/nc_20503947/" },
+      { propertyName: "パークホームズ月島二丁目", propertyId: "j975m61wenq27kbz00qj1er9qd86yvf9",
+        price: 11200, areaSqm: 68.57, floor: 4,
+        pricePerSqm: Math.round(11200 / 68.57 * 10) / 10, remainingLeaseYears: 43,
+        source: "https://suumo.jp/ms/chuko/tokyo/sc_chuo/nc_20436177/" },
+    ];
+
+    const results: string[] = [];
+
+    for (const nc of newPrices) {
+      const existing = await ctx.db
+        .query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", nc.propertyId as never))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("transactionYear"), nc.transactionYear),
+            q.eq(q.field("priceType"), "new_construction"),
+          )
+        )
+        .first();
+      if (existing) { results.push(`SKIP nc: ${nc.propertyName}（既存）`); continue; }
+      await ctx.db.insert("transactions", {
+        propertyId: nc.propertyId as never,
+        transactionYearQ: `${nc.transactionYear}Q${nc.q}`,
+        transactionYear: nc.transactionYear,
+        price: nc.price, areaSqm: nc.areaSqm, remainingLeaseYears: nc.remainingLeaseYears,
+        pricePerSqm: nc.pricePerSqm, isNewConstruction: true, priceType: "new_construction",
+        source: nc.source,
+      });
+      results.push(`OK nc: ${nc.propertyName} ${nc.price}万（${nc.areaSqm}m², 残${nc.remainingLeaseYears}年）`);
+    }
+
+    for (const l of listings) {
+      const existing = await ctx.db
+        .query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", l.propertyId as never))
+        .filter((q) =>
+          q.and(q.eq(q.field("source"), l.source), q.eq(q.field("priceType"), "listing"))
+        )
+        .first();
+      if (existing) { results.push(`SKIP listing: ${l.propertyName} ${l.price}万（既存）`); continue; }
+      await ctx.db.insert("transactions", {
+        propertyId: l.propertyId as never,
+        transactionYearQ: "2026Q2", transactionYear: 2026,
+        price: l.price, areaSqm: l.areaSqm, floor: l.floor,
+        remainingLeaseYears: l.remainingLeaseYears, pricePerSqm: l.pricePerSqm,
+        isNewConstruction: false, priceType: "listing", source: l.source,
+      });
+      results.push(`OK listing: ${l.propertyName} ${l.price}万（${l.areaSqm}m², 残${l.remainingLeaseYears}年）`);
+    }
+    return results;
+  },
+});
