@@ -36,16 +36,31 @@ export default function AnalyticsPage() {
           残存年数別 資産価値グラフ
         </h1>
         <p className="text-slate-600 mb-4">
-          東京23区の定期借地権マンションの実取引データに基づく、残存年数別の価格推移です。
+          東京23区の定期借地権マンションの価格データに基づく、残存年数別の資産価値推移です。
         </p>
         <div className="flex flex-wrap items-center gap-3">
           {txStats && (
-            <Badge variant="secondary">
-              取引データ {txStats.total}件（中古 {txStats.resale}件）
-            </Badge>
+            <>
+              <Badge variant="secondary">
+                新築価格 {txStats.newConstruction}件
+              </Badge>
+              <Badge variant="secondary">
+                中古売り出し {txStats.listing}件
+              </Badge>
+              {txStats.transaction > 0 && (
+                <Badge variant="secondary">
+                  成約価格 {txStats.transaction}件
+                </Badge>
+              )}
+            </>
           )}
-          <Badge variant="outline">出典: 国土交通省 不動産取引価格情報</Badge>
+          <Badge variant="outline">出典: SUUMO（売り出し価格ベース）</Badge>
         </div>
+        {txStats && txStats.transaction === 0 && (
+          <p className="text-xs text-amber-600 mt-2">
+            ※ 現在は売り出し価格ベースのデータです。実成約価格（国交省CSV）追加後に精度が上がります。
+          </p>
+        )}
       </div>
 
       {/* フィルター */}

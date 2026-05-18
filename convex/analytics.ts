@@ -62,6 +62,7 @@ export const getRawTransactions = query({
       remainingLeaseYears: t.remainingLeaseYears,
       pricePerSqm: t.pricePerSqm,
       transactionYear: t.transactionYear,
+      priceType: t.priceType ?? "transaction",
     }));
   },
 });

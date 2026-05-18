@@ -56,7 +56,7 @@ export function AssetValueChart({ data }: Props) {
       {/* 新築比価格比率グラフ */}
       <div>
         <h3 className="text-base font-semibold text-slate-700 mb-1">新築時価格を100%とした場合の価格比率</h3>
-        <p className="text-xs text-slate-400 mb-4">残存年数が多いほど価格比率が高い傾向にあります</p>
+        <p className="text-xs text-slate-400 mb-4">100%超 = 新築時より値上がり。残存年数が長いほど高い傾向にあります</p>
         <ResponsiveContainer width="100%" height={320}>
           <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -67,7 +67,7 @@ export function AssetValueChart({ data }: Props) {
             />
             <YAxis
               tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-              domain={[0, 1.5]}
+              domain={[0, "auto"]}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend verticalAlign="top" />
