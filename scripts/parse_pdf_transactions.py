@@ -12,6 +12,23 @@ REINS 売買物件検索結果（成約）PDF → JSON コンバーター
 
 依存ライブラリ:
   pip install pdfplumber
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+出力JSON の各レコードフィールド定義（Convex transactions テーブルと対応）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  buildingName    : str   物件マスタの名前と完全一致する必要あり
+  sourceRecordId  : str   物件番号（12桁）重複防止キー
+  price           : float 成約価格（万円）
+  areaSqm         : float 専有面積（m²）
+  transactionDate : str   成約年月日 "YYYY-MM-DD"  ← 日付を3フィールドに分けて格納
+                              ↓ importBatch が自動計算
+                          transactionYear  : int  取引年  例: 2026
+                          transactionYearQ : str  取引年月 "YYYY-MM" 例: "2026-05"
+  layout          : str   間取 例: "3LDK"
+  managementFee   : int   管理費（円/月）
+  buildingYear    : int   築年（検証用、DBには格納しない）
+  _recordNo       : int   PDF内のNo.（デバッグ用）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 import re
