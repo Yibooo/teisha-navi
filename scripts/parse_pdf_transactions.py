@@ -47,16 +47,23 @@ def parse_record(text: str, building_name_override: str | None = None) -> dict |
     if m:
         result["areaSqm"] = float(m.group(1))
 
-    # ── 価格（万円）── ラベル付きを優先、なければ整数のみの 万円
+    # ── 価格（万円）──
+    # ラベル付き（「価格: 10,800万円」等）を優先
     m = re.search(r'価格\s*[：:＊]?\s*([\d,]+)\s*万円', text)
-    if not m:
-        # ㎡単価・坪単価（小数あり）を除外して整数の万円を探す
-        matches = re.findall(r'(?<!\.\d)\b(\d{3,5})\s*万円', text)
-        if matches:
-            prices = [int(x.replace(',', '')) for x in matches]
-            result["price"] = max(prices)  # 最大値 = 成約価格
-    else:
+    if m:
         result["price"] = int(m.group(1).replace(',', ''))
+    else:
+        # ラベルなし: コンマ付き整数の万円を全て抽出し、最大値を成約価格とする
+        # 例: "10,800万円" → 10800  "149.7万円"（㎡単価）は小数なので除外
+        all_manyen = re.findall(r'([\d,]+(?:\.\d+)?)\s*万円', text)
+        int_prices = []
+        for p in all_manyen:
+            if '.' not in p:          # 小数なし = 成約価格 or 管理費等（整数）
+                val = int(p.replace(',', ''))
+                if val >= 500:        # 東京の定期借地権マンションの現実的下限
+                    int_prices.append(val)
+        if int_prices:
+            result["price"] = max(int_prices)  # 最大値 = 成約価格
 
     # ── 建物名 ──
     m = re.search(r'建物名\s*[：:＊]?\s*(.+?)(?=\s+\d+階|\s+\d[SLDK]|\s*$)', text, re.MULTILINE)
