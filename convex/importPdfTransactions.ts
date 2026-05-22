@@ -44,7 +44,8 @@ export const importBatch = mutation({
       const tag = `No.${record._recordNo ?? "?"}（${record.buildingName}）`;
 
       try {
-        // ── 1. 物件マスタを検索（fuzzy → exact / 正規化フォールバック） ──────
+        // ── 1. 物件マスタを検索 ───────────────────────────────────────────────
+        // まず searchIndex で候補を絞り、なければ全件スキャン（物件数が少ないため許容）
         const candidates = await ctx.db
           .query("properties")
           .withSearchIndex("search_name", (q) =>
@@ -52,11 +53,22 @@ export const importBatch = mutation({
           )
           .collect();
 
-        const property =
+        let property =
           candidates.find((p) => p.name === record.buildingName) ??
           candidates.find(
             (p) => normalizeName(p.name) === normalizeName(record.buildingName)
           );
+
+        // searchIndex が日本語をトークナイズできなかった場合のフォールバック
+        if (!property) {
+          const allProps = await ctx.db.query("properties").collect();
+          property =
+            allProps.find((p) => p.name === record.buildingName) ??
+            allProps.find(
+              (p) =>
+                normalizeName(p.name) === normalizeName(record.buildingName)
+            );
+        }
 
         if (!property) {
           results.notFound++;
