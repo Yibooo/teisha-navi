@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 // ── 1件分のレコード型（Pythonパーサー出力に対応） ──────────────────────────
@@ -91,12 +91,12 @@ export const importBatch = mutation({
           continue;
         }
 
-        // ── 3. 日付から取引年・四半期を導出 ────────────────────────────────
+        // ── 3. 日付から取引年・年月を導出 ──────────────────────────────────
         const [yearStr, monthStr] = record.transactionDate.split("-");
         const transactionYear = parseInt(yearStr, 10);
         const month = parseInt(monthStr, 10);
-        const quarter = Math.ceil(month / 3);
-        const transactionYearQ = `${transactionYear}Q${quarter}`;
+        // "YYYY-MM" 形式で格納（例: "2026-05"）
+        const transactionYearQ = `${transactionYear}-${monthStr.padStart(2, "0")}`;
 
         // ── 4. 残存借地権年数を計算 ─────────────────────────────────────────
         const remainingLeaseYears =
@@ -135,5 +135,30 @@ export const importBatch = mutation({
     }
 
     return results;
+  },
+});
+
+// ── transactionYearQ を "YYYYQn" → "YYYY-MM" に一括更新するマイグレーション ──
+// transactionDate を持つレコード（REINS PDFインポート分）のみ対象
+export const migrateYearQToYearMonth = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // sourceRecordId を持つ = PDF由来レコード
+    const all = await ctx.db.query("transactions").collect();
+    const targets = all.filter(
+      (t) => t.sourceRecordId !== undefined && t.transactionDate !== undefined
+    );
+
+    let updated = 0;
+    for (const t of targets) {
+      // 既に "YYYY-MM" 形式なら skip
+      if (t.transactionYearQ && /^\d{4}-\d{2}$/.test(t.transactionYearQ)) continue;
+
+      const [yearStr, monthStr] = (t.transactionDate as string).split("-");
+      const newYearQ = `${yearStr}-${monthStr.padStart(2, "0")}`;
+      await ctx.db.patch(t._id, { transactionYearQ: newYearQ });
+      updated++;
+    }
+    return { updated };
   },
 });
