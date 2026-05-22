@@ -40,10 +40,16 @@ export default defineSchema({
       v.literal("transaction"),
     )),
     source: v.string(),               // データソース（URL含む）
+    // REINS PDF インポート用フィールド
+    transactionDate: v.optional(v.string()),     // 成約年月日 "YYYY-MM-DD"
+    layout: v.optional(v.string()),              // 間取（例: "3LDK"）
+    managementFee: v.optional(v.number()),       // 管理費（円）
+    sourceRecordId: v.optional(v.string()),      // 物件番号（REINS等・重複防止用）
   })
     .index("by_property", ["propertyId"])
     .index("by_remaining_years", ["remainingLeaseYears"])
-    .index("by_year", ["transactionYear"]),
+    .index("by_year", ["transactionYear"])
+    .index("by_source_record_id", ["sourceRecordId"]),
 
   // グラフ・シミュレーション用集計キャッシュ
   analysisCache: defineTable({
