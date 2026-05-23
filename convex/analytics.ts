@@ -175,7 +175,7 @@ export const rebuildCache = mutation({
         const avgTsubo = Math.round(tsuboPrices.reduce((a, b) => a + b, 0) / tsuboPrices.length * 10) / 10;
         const medianTsubo = Math.round(tsuboPrices[Math.floor(tsuboPrices.length / 2)] * 10) / 10;
 
-        // 新築比（各取引の物件の新築価格と比較）
+        // 新築比（新築価格データがある物件のみ比較）
         const ratios = inBucket
           .map((t) => {
             const newPrice = avgNewPrice[t.propertyId as string];
@@ -183,15 +183,16 @@ export const rebuildCache = mutation({
           })
           .filter((r): r is number => r !== null);
 
-        const avgRatio =
-          ratios.length > 0
-            ? ratios.reduce((a, b) => a + b, 0) / ratios.length
-            : 1;
+        // 新築比はデータがある場合のみ保存（デフォルト100%での誤魔化しを防ぐ）
         const sortedRatios = [...ratios].sort((a, b) => a - b);
-        const medianRatio =
-          sortedRatios.length > 0
-            ? sortedRatios[Math.floor(sortedRatios.length / 2)]
-            : 1;
+        const ratioFields =
+          ratios.length > 0
+            ? {
+                avgPriceRatio: ratios.reduce((a, b) => a + b, 0) / ratios.length,
+                medianPriceRatio: sortedRatios[Math.floor(sortedRatios.length / 2)],
+                ratioSampleCount: ratios.length,
+              }
+            : {};
 
         await ctx.db.insert("analysisCache", {
           remainingYearsBucket: bucket.label,
@@ -202,8 +203,7 @@ export const rebuildCache = mutation({
           medianPricePerSqm: median,
           avgPricePerTsubo: avgTsubo,
           medianPricePerTsubo: medianTsubo,
-          avgPriceRatio: avgRatio,
-          medianPriceRatio: medianRatio,
+          ...ratioFields,
           sampleCount: inBucket.length,
           updatedAt: now,
         });

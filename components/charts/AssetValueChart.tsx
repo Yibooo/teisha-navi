@@ -17,8 +17,9 @@ type CachePoint = {
   remainingYearsBucket: string;
   bucketMin: number;
   bucketMax: number;
-  avgPriceRatio: number;
-  medianPriceRatio: number;
+  avgPriceRatio?: number;
+  medianPriceRatio?: number;
+  ratioSampleCount?: number;
   sampleCount: number;
   avgPricePerSqm: number;
   medianPricePerSqm: number;
@@ -53,14 +54,29 @@ export function AssetValueChart({ data }: Props) {
     );
   }
 
+  // 新築比グラフ用データ：新築価格との比較データがある点のみ（ない点は null でスキップ）
+  const ratioData = data.map((d) => ({
+    ...d,
+    avgPriceRatio: d.ratioSampleCount && d.ratioSampleCount > 0 ? d.avgPriceRatio : null,
+    medianPriceRatio: d.ratioSampleCount && d.ratioSampleCount > 0 ? d.medianPriceRatio : null,
+  }));
+  const hasAnyRatioData = ratioData.some((d) => d.avgPriceRatio != null);
+
   return (
     <div className="space-y-8">
       {/* 新築比価格比率グラフ */}
       <div>
         <h3 className="text-base font-semibold text-slate-700 mb-1">新築時価格を100%とした場合の価格比率</h3>
-        <p className="text-xs text-slate-400 mb-4">100%超 = 新築時より値上がり。残存年数が長いほど高い傾向にあります</p>
+        <p className="text-xs text-slate-400 mb-4">
+          100%超 = 新築時より値上がり。新築価格データがある物件のみ表示（データなし年数帯はグラフ非表示）
+        </p>
+        {!hasAnyRatioData ? (
+          <div className="flex items-center justify-center h-40 text-slate-400 border border-dashed border-slate-200 rounded-lg">
+            <p className="text-sm">新築価格との比較データがまだありません</p>
+          </div>
+        ) : (
         <ResponsiveContainer width="100%" height={320}>
-          <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+          <ComposedChart data={ratioData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
               dataKey="bucketMin"
@@ -75,9 +91,10 @@ export function AssetValueChart({ data }: Props) {
             <Legend verticalAlign="top" />
             <ReferenceLine y={1} stroke="#94a3b8" strokeDasharray="6 3" label={{ value: "新築時=100%", position: "right", fontSize: 11 }} />
             <Bar dataKey="avgPriceRatio" name="平均比率" fill="#93c5fd" radius={[3, 3, 0, 0]} />
-            <Line dataKey="medianPriceRatio" name="中央値比率" type="monotone" stroke="#2563eb" strokeWidth={2} dot={{ r: 4 }} />
+            <Line dataKey="medianPriceRatio" name="中央値比率" type="monotone" stroke="#2563eb" strokeWidth={2} dot={{ r: 4 }} connectNulls={false} />
           </ComposedChart>
         </ResponsiveContainer>
+        )}
       </div>
 
       {/* 坪単価グラフ */}
@@ -119,7 +136,11 @@ export function AssetValueChart({ data }: Props) {
                 <td className="text-right py-2">{d.sampleCount}件</td>
                 <td className="text-right py-2">{(d.avgPricePerTsubo ?? d.avgPricePerSqm * 3.30578).toFixed(1)}万円/坪</td>
                 <td className="text-right py-2">{(d.medianPricePerTsubo ?? d.medianPricePerSqm * 3.30578).toFixed(1)}万円/坪</td>
-                <td className="text-right py-2">{(d.medianPriceRatio * 100).toFixed(1)}%</td>
+                <td className="text-right py-2">
+                  {d.ratioSampleCount && d.ratioSampleCount > 0 && d.medianPriceRatio != null
+                    ? `${(d.medianPriceRatio * 100).toFixed(1)}%`
+                    : <span className="text-slate-300">—</span>}
+                </td>
               </tr>
             ))}
           </tbody>

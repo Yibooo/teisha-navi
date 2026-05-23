@@ -61,8 +61,9 @@ export default defineSchema({
     medianPricePerSqm: v.number(),     // 中央値単価（万円/m²）
     avgPricePerTsubo: v.optional(v.number()),    // 平均坪単価（万円/坪）
     medianPricePerTsubo: v.optional(v.number()), // 中央値坪単価（万円/坪）
-    avgPriceRatio: v.number(),         // 新築比平均価格比率（0〜1）
-    medianPriceRatio: v.number(),      // 新築比中央値価格比率（0〜1）
+    avgPriceRatio: v.optional(v.number()),         // 新築比平均価格比率（新築データあり物件のみ）
+    medianPriceRatio: v.optional(v.number()),      // 新築比中央値価格比率（新築データあり物件のみ）
+    ratioSampleCount: v.optional(v.number()),      // 新築比算出に使ったサンプル数
     sampleCount: v.number(),           // サンプル件数
     updatedAt: v.number(),             // 更新日時（Unix ms）
   })
