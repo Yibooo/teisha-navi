@@ -41,7 +41,7 @@ export default function AnalyticsPage() {
           残存年数別 資産価値グラフ
         </h1>
         <p className="text-slate-600 mb-4">
-          東京23区の定期借地権マンションの<strong>実成約価格</strong>（REINS成約データ）に基づく、残存年数別の資産価値推移です。
+          東京23区の定期借地権マンションの<strong>実成約価格</strong>に基づく、残存年数別の資産価値推移です。
         </p>
         <div className="flex flex-wrap items-center gap-3">
           {txStats && (
