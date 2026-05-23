@@ -126,10 +126,10 @@ export default function AnalyticsPage() {
               ) : (
                 propertiesWithData.map((p) => (
                   <tr key={p._id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">
+                    <td className="px-4 py-3 font-medium">
                       <Link
                         href={`/analytics/property/${p._id}`}
-                        className="hover:text-blue-600 hover:underline transition-colors"
+                        className="text-blue-700 underline hover:text-blue-900 cursor-pointer"
                       >
                         {p.name}
                       </Link>
