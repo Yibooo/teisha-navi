@@ -12,23 +12,24 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-
 type CachePoint = {
   remainingYearsBucket: string;
   bucketMin: number;
   bucketMax: number;
-  avgPriceRatio?: number;
-  medianPriceRatio?: number;
-  ratioSampleCount?: number;
+  avgPriceRatio?: number | null;
+  medianPriceRatio?: number | null;
+  ratioSampleCount?: number | null;
   sampleCount: number;
   avgPricePerSqm: number;
   medianPricePerSqm: number;
-  avgPricePerTsubo?: number;
-  medianPricePerTsubo?: number;
+  avgPricePerTsubo?: number | null;
+  medianPricePerTsubo?: number | null;
+  [key: string]: unknown; // DB の追加フィールド(_id, _creationTime等)を許容
 };
 
 type Props = {
-  data: CachePoint[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any[];
 };
 
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {

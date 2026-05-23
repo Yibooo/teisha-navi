@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import Link from "next/link";
 
 const WARDS = [
   "千代田区", "中央区", "港区", "新宿区", "文京区", "台東区",
@@ -125,7 +126,14 @@ export default function AnalyticsPage() {
               ) : (
                 propertiesWithData.map((p) => (
                   <tr key={p._id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-900">{p.name}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      <Link
+                        href={`/analytics/property/${p._id}`}
+                        className="hover:text-blue-600 hover:underline transition-colors"
+                      >
+                        {p.name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-slate-600">{p.ward}</td>
                     <td className="px-4 py-3 text-right text-slate-600">{p.buildingYear}年</td>
                     <td className="px-4 py-3 text-right text-slate-600">{p.leaseEndYear}年</td>

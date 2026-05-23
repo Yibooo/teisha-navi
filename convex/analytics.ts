@@ -15,9 +15,23 @@ export const getChartData = query({
       ? allCache.filter((c) => c.ward === args.ward)
       : allCache.filter((c) => c.ward === undefined || c.ward === null);
 
-    // bucketMin で昇順ソート
+    // bucketMin で昇順ソート、必要フィールドのみ返す
     filtered.sort((a, b) => a.bucketMin - b.bucketMin);
-    return filtered;
+    return filtered.map((c) => ({
+      remainingYearsBucket: c.remainingYearsBucket,
+      bucketMin: c.bucketMin,
+      bucketMax: c.bucketMax,
+      ward: c.ward,
+      avgPricePerSqm: c.avgPricePerSqm,
+      medianPricePerSqm: c.medianPricePerSqm,
+      avgPricePerTsubo: c.avgPricePerTsubo,
+      medianPricePerTsubo: c.medianPricePerTsubo,
+      avgPriceRatio: c.avgPriceRatio,
+      medianPriceRatio: c.medianPriceRatio,
+      ratioSampleCount: c.ratioSampleCount,
+      sampleCount: c.sampleCount,
+      updatedAt: c.updatedAt,
+    }));
   },
 });
 
@@ -29,12 +43,24 @@ export const getSimulationPoints = query({
       .query("analysisCache")
       .collect();
 
-    // 全区集計のみ取得し、bucketMinで昇順
+    // 全区集計 & 新築比データがあるもののみ取得し、bucketMinで昇順
     const globalPoints = allCache
-      .filter((c) => c.ward === undefined || c.ward === null)
+      .filter(
+        (c) =>
+          (c.ward === undefined || c.ward === null) &&
+          c.avgPriceRatio != null &&
+          c.medianPriceRatio != null
+      )
       .sort((a, b) => a.bucketMin - b.bucketMin);
 
-    return globalPoints;
+    // シミュレーション用に必要フィールドのみ返す
+    return globalPoints.map((c) => ({
+      bucketMin: c.bucketMin,
+      bucketMax: c.bucketMax,
+      avgPriceRatio: c.avgPriceRatio as number,
+      medianPriceRatio: c.medianPriceRatio as number,
+      sampleCount: c.sampleCount,
+    }));
   },
 });
 
@@ -104,6 +130,88 @@ export const getPropertiesWithDataCounts = query({
         };
       })
       .sort((a, b) => (b.totalUnits ?? 0) - (a.totalUnits ?? 0));
+  },
+});
+
+// 物件別グラフデータ（1年刻み・成約価格のみ）
+export const getPropertyChartData = query({
+  args: { propertyId: v.id("properties") },
+  handler: async (ctx, args) => {
+    const property = await ctx.db.get(args.propertyId);
+    if (!property) return null;
+
+    const allTx = await ctx.db
+      .query("transactions")
+      .withIndex("by_property", (q) => q.eq("propertyId", args.propertyId))
+      .collect();
+
+    // 成約価格のみ
+    const txOnly = allTx.filter((t) => t.priceType === "transaction");
+
+    // 新築価格（参照線用）
+    const newTx = allTx.filter(
+      (t) => t.priceType === "new_construction" || t.isNewConstruction
+    );
+    const newConstructionPricePerTsubo =
+      newTx.length > 0
+        ? Math.round(
+            (newTx.reduce(
+              (a, t) => a + (t.pricePerTsubo ?? t.pricePerSqm * 3.30578),
+              0
+            ) /
+              newTx.length) *
+              10
+          ) / 10
+        : null;
+
+    // 1年刻みでグループ化
+    const byYear = new Map<number, { tsuboPrices: number[]; dates: string[] }>();
+    for (const t of txOnly) {
+      const year = Math.round(t.remainingLeaseYears);
+      if (!byYear.has(year)) byYear.set(year, { tsuboPrices: [], dates: [] });
+      const tsubo = t.pricePerTsubo ?? t.pricePerSqm * 3.30578;
+      byYear.get(year)!.tsuboPrices.push(tsubo);
+      if (t.transactionDate) byYear.get(year)!.dates.push(t.transactionDate);
+    }
+
+    const points = Array.from(byYear.entries())
+      .map(([year, { tsuboPrices, dates }]) => {
+        const sorted = [...tsuboPrices].sort((a, b) => a - b);
+        return {
+          remainingYears: year,
+          avgPricePerTsubo:
+            Math.round(
+              (tsuboPrices.reduce((a, b) => a + b, 0) / tsuboPrices.length) * 10
+            ) / 10,
+          medianPricePerTsubo:
+            Math.round(sorted[Math.floor(sorted.length / 2)] * 10) / 10,
+          minPricePerTsubo: Math.round(sorted[0] * 10) / 10,
+          maxPricePerTsubo: Math.round(sorted[sorted.length - 1] * 10) / 10,
+          sampleCount: tsuboPrices.length,
+          latestDate: dates.sort().reverse()[0] ?? null,
+        };
+      })
+      .sort((a, b) => a.remainingYears - b.remainingYears);
+
+    const leaseEndYear = property.leaseStartYear + property.leaseTotalYears;
+    const currentYear = 2026;
+
+    return {
+      property: {
+        _id: property._id,
+        name: property.name,
+        ward: property.ward,
+        buildingYear: property.buildingYear,
+        leaseEndYear,
+        remainingYears: leaseEndYear - currentYear,
+        totalUnits: property.totalUnits,
+        nearestStation: property.nearestStation,
+        walkMinutes: property.walkMinutes,
+      },
+      points,
+      newConstructionPricePerTsubo,
+      totalTransactions: txOnly.length,
+    };
   },
 });
 
