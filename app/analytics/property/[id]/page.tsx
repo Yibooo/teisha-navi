@@ -79,7 +79,8 @@ export default function PropertyAnalyticsPage() {
         <div className="flex flex-wrap gap-3 text-sm text-slate-500 mb-4">
           <span>{property.ward}</span>
           <span>竣工 {property.buildingYear}年</span>
-          <span>借地期限 {property.leaseEndYear}年（残存 {property.remainingYears}年）</span>
+          <span>新築時残存 {property.leaseEndYear - property.buildingYear}年</span>
+          <span>借地期限 {property.leaseEndYear}年（現残存 {property.remainingYears}年）</span>
           {property.totalUnits && <span>総戸数 {property.totalUnits}戸</span>}
           {property.nearestStation && (
             <span>{property.nearestStation}駅 徒歩{property.walkMinutes}分</span>
@@ -112,7 +113,7 @@ export default function PropertyAnalyticsPage() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={360}>
-            <ComposedChart data={points} margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
+            <ComposedChart data={points} margin={{ top: 10, right: 160, left: 10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis
                 dataKey="remainingYears"

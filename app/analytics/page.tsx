@@ -105,6 +105,7 @@ export default function AnalyticsPage() {
                 <th className="text-left px-4 py-3 font-medium text-slate-600">マンション名</th>
                 <th className="text-left px-4 py-3 font-medium text-slate-600">区</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">竣工</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-600">新築時残存</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">借地期限</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">残存年数</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">総戸数</th>
@@ -115,11 +116,11 @@ export default function AnalyticsPage() {
             <tbody>
               {propertiesWithData === undefined ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-6 text-center text-slate-400 text-sm">読み込み中...</td>
+                  <td colSpan={9} className="px-4 py-6 text-center text-slate-400 text-sm">読み込み中...</td>
                 </tr>
               ) : propertiesWithData.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-6 text-center text-slate-400 text-sm">
+                  <td colSpan={9} className="px-4 py-6 text-center text-slate-400 text-sm">
                     {selectedWard === "all" ? "物件データがありません" : `${selectedWard}の物件データがありません`}
                   </td>
                 </tr>
@@ -136,6 +137,7 @@ export default function AnalyticsPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">{p.ward}</td>
                     <td className="px-4 py-3 text-right text-slate-600">{p.buildingYear}年</td>
+                    <td className="px-4 py-3 text-right text-slate-600">{p.leaseEndYear - p.buildingYear}年</td>
                     <td className="px-4 py-3 text-right text-slate-600">{p.leaseEndYear}年</td>
                     <td className="px-4 py-3 text-right">
                       <span className={
