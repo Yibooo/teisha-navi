@@ -46,8 +46,8 @@ export const getRawTransactions = query({
   handler: async (ctx, args) => {
     const allTx = await ctx.db.query("transactions").collect();
 
-    // 中古取引のみ
-    let resale = allTx.filter((t) => !t.isNewConstruction);
+    // 成約価格のみ
+    let resale = allTx.filter((t) => t.priceType === "transaction");
 
     if (args.ward) {
       // ward でフィルタするためには property を join する
@@ -139,7 +139,8 @@ export const rebuildCache = mutation({
     const existing = await ctx.db.query("analysisCache").collect();
     await Promise.all(existing.map((c) => ctx.db.delete(c._id)));
 
-    const resale = allTx.filter((t) => !t.isNewConstruction);
+    // 成約価格のみを対象とする（売り出し価格・新築価格は除外）
+    const resale = allTx.filter((t) => t.priceType === "transaction");
     const now = Date.now();
 
     // 全区 + 区別でキャッシュ構築

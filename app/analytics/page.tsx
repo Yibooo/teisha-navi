@@ -40,30 +40,20 @@ export default function AnalyticsPage() {
           残存年数別 資産価値グラフ
         </h1>
         <p className="text-slate-600 mb-4">
-          東京23区の定期借地権マンションの価格データに基づく、残存年数別の資産価値推移です。
+          東京23区の定期借地権マンションの<strong>実成約価格</strong>（REINS成約データ）に基づく、残存年数別の資産価値推移です。
         </p>
         <div className="flex flex-wrap items-center gap-3">
           {txStats && (
             <>
               <Badge variant="secondary">
-                新築価格 {txStats.newConstruction}件
+                成約価格 {txStats.transaction}件
               </Badge>
               <Badge variant="secondary">
-                中古売り出し {txStats.listing}件
+                新築価格 {txStats.newConstruction}件
               </Badge>
-              {txStats.transaction > 0 && (
-                <Badge variant="secondary">
-                  成約価格 {txStats.transaction}件
-                </Badge>
-              )}
             </>
           )}
         </div>
-        {txStats && txStats.transaction === 0 && (
-          <p className="text-xs text-amber-600 mt-2">
-            ※ 現在は売り出し価格ベースのデータです。実成約価格（国交省CSV）追加後に精度が上がります。
-          </p>
-        )}
       </div>
 
       {/* フィルター */}
@@ -187,7 +177,8 @@ export default function AnalyticsPage() {
         <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
           <h3 className="font-semibold text-blue-900 mb-2">📈 グラフの見方</h3>
           <ul className="text-sm text-blue-800 space-y-1 leading-relaxed">
-            <li>• 横軸：残存借地権年数</li>
+            <li>• データ：REINS実成約価格（売り出し価格ではなく、実際に取引が成立した価格）</li>
+            <li>• 横軸：成約時点での残存借地権年数</li>
             <li>• 縦軸（上段）：新築時価格を100%とした場合の比率</li>
             <li>• 縦軸（下段）：坪単価（万円/坪）</li>
             <li>• サンプル数が少ないバケットは参考値として参照ください</li>
