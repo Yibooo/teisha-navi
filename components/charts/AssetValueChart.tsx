@@ -11,6 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
+  Scatter,
 } from "recharts";
 type CachePoint = {
   remainingYearsBucket: string;
@@ -27,26 +28,38 @@ type CachePoint = {
   [key: string]: unknown; // DB の追加フィールド(_id, _creationTime等)を許容
 };
 
+type NewConstructionPoint = {
+  remainingLeaseYears: number;
+  pricePerTsubo: number;
+  propertyName: string;
+};
+
 type Props = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any[];
+  newConstructionPoints?: NewConstructionPoint[];
 };
 
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string; payload?: NewConstructionPoint }>; label?: string }) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-sm">
       <p className="font-bold text-slate-900 mb-2">残存{label}年</p>
       {payload.map((p) => (
-        <p key={p.name} style={{ color: p.color }}>
-          {p.name}: {p.name.includes("比率") ? `${(p.value * 100).toFixed(1)}%` : `${p.value.toFixed(1)}万円/坪`}
-        </p>
+        <div key={p.name}>
+          <p style={{ color: p.color }}>
+            {p.name}: {p.name.includes("比率") ? `${(p.value * 100).toFixed(1)}%` : `${p.value.toFixed(1)}万円/坪`}
+          </p>
+          {p.payload?.propertyName && (
+            <p className="text-xs text-slate-500 ml-2">{p.payload.propertyName}</p>
+          )}
+        </div>
       ))}
     </div>
   );
 };
 
-export function AssetValueChart({ data }: Props) {
+export function AssetValueChart({ data, newConstructionPoints = [] }: Props) {
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-80 text-slate-400">
@@ -101,19 +114,41 @@ export function AssetValueChart({ data }: Props) {
       {/* 坪単価グラフ */}
       <div>
         <h3 className="text-base font-semibold text-slate-700 mb-1">残存年数別 平均坪単価（万円/坪）</h3>
-        <p className="text-xs text-slate-400 mb-4">サンプル件数が少ないバケットはご参考程度にご覧ください</p>
-        <ResponsiveContainer width="100%" height={280}>
-          <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+        <p className="text-xs text-slate-400 mb-4">
+          サンプル件数が少ないバケットはご参考程度にご覧ください
+          {newConstructionPoints.length > 0 && (
+            <span className="ml-2 text-blue-400">● 新築時坪単価（各物件の新築分譲価格）</span>
+          )}
+        </p>
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
               dataKey="bucketMin"
+              type="number"
+              domain={[0, 75]}
               tickFormatter={(v) => `${v}年`}
+              allowDuplicatedCategory={false}
             />
             <YAxis tickFormatter={(v) => `${v}万`} />
             <Tooltip content={<CustomTooltip />} />
             <Legend verticalAlign="top" />
-            <Bar dataKey="avgPricePerTsubo" name="平均坪単価（万円/坪）" fill="#6ee7b7" radius={[3, 3, 0, 0]} />
-            <Line dataKey="medianPricePerTsubo" name="中央値坪単価（万円/坪）" type="monotone" stroke="#059669" strokeWidth={2} dot={{ r: 4 }} />
+            <Bar data={data} dataKey="avgPricePerTsubo" name="平均坪単価（万円/坪）" fill="#6ee7b7" radius={[3, 3, 0, 0]} />
+            <Line data={data} dataKey="medianPricePerTsubo" name="中央値坪単価（万円/坪）" type="monotone" stroke="#059669" strokeWidth={2} dot={{ r: 4 }} />
+            {newConstructionPoints.length > 0 && (
+              <Scatter
+                data={newConstructionPoints.map((p) => ({
+                  bucketMin: p.remainingLeaseYears,
+                  avgPricePerTsubo: p.pricePerTsubo,
+                  propertyName: p.propertyName,
+                }))}
+                dataKey="avgPricePerTsubo"
+                name="新築時坪単価"
+                fill="#3b82f6"
+                shape="circle"
+                legendType="circle"
+              />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>

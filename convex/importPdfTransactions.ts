@@ -138,6 +138,21 @@ export const importBatch = mutation({
   },
 });
 
+// ── source が一致するレコードの priceType を新築に更新するマイグレーション ──
+export const fixPriceTypeBySource = mutation({
+  args: { source: v.string(), priceType: v.union(v.literal("new_construction"), v.literal("listing"), v.literal("transaction")) },
+  handler: async (ctx, args) => {
+    const all = await ctx.db.query("transactions").collect();
+    const targets = all.filter((t) => t.source === args.source);
+    let updated = 0;
+    for (const t of targets) {
+      await ctx.db.patch(t._id, { priceType: args.priceType, isNewConstruction: args.priceType === "new_construction" });
+      updated++;
+    }
+    return { updated };
+  },
+});
+
 // ── transactionYearQ を "YYYYQn" → "YYYY-MM" に一括更新するマイグレーション ──
 // transactionDate を持つレコード（REINS PDFインポート分）のみ対象
 export const migrateYearQToYearMonth = internalMutation({

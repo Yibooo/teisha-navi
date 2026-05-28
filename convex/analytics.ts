@@ -215,6 +215,34 @@ export const getPropertyChartData = query({
   },
 });
 
+// 新築散布点データ取得（全体グラフ用）
+export const getNewConstructionPoints = query({
+  args: { ward: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const allTx = await ctx.db.query("transactions").collect();
+    const properties = await ctx.db.query("properties").collect();
+    const propMap = new Map(properties.map((p) => [p._id, p]));
+
+    let newTx = allTx.filter(
+      (t) => t.priceType === "new_construction" || t.isNewConstruction
+    );
+
+    if (args.ward) {
+      const wardPropIds = new Set(
+        properties.filter((p) => p.ward === args.ward).map((p) => p._id)
+      );
+      newTx = newTx.filter((t) => wardPropIds.has(t.propertyId));
+    }
+
+    return newTx.map((t) => ({
+      remainingLeaseYears: Math.round(t.remainingLeaseYears),
+      pricePerTsubo:
+        Math.round((t.pricePerTsubo ?? t.pricePerSqm * 3.30578) * 10) / 10,
+      propertyName: propMap.get(t.propertyId)?.name ?? "不明",
+    }));
+  },
+});
+
 // キャッシュ再構築（Admin から呼ぶ）
 export const rebuildCache = mutation({
   args: {},

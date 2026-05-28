@@ -28,6 +28,10 @@ export default function AnalyticsPage() {
     ward: selectedWard === "all" ? undefined : selectedWard,
   });
 
+  const newConstructionPoints = useQuery(api.analytics.getNewConstructionPoints, {
+    ward: selectedWard === "all" ? undefined : selectedWard,
+  });
+
   const txStats = useQuery(api.transactions.getStats, {});
 
   const propertiesWithData = useQuery(api.analytics.getPropertiesWithDataCounts, {
@@ -82,7 +86,7 @@ export default function AnalyticsPage() {
             <div className="text-slate-400">データを読み込み中...</div>
           </div>
         ) : (
-          <AssetValueChart data={chartData} />
+          <AssetValueChart data={chartData} newConstructionPoints={newConstructionPoints ?? []} />
         )}
       </div>
 
