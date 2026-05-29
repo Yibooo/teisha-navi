@@ -7,6 +7,16 @@
 
 ---
 
+## 確定した方針・決定事項
+
+| 項目 | 決定内容 |
+|------|---------|
+| Google Form | **ユーザーがフォームを作成してURLをClaudeに渡す**。回答収集・管理はGoogleスプレッドシートで完結 |
+| アカウント作成 | **ベータ期間は招待制（管理者発行）**。スパム防止・品質フィードバック収集のため。一般公開後はセルフサインアップに移行 |
+| ベータ期間の課金 | **課金UI/システムは実装しない**。支払いは友人間で直接行う（現金・振込等）。Stripeは一般公開時に導入 |
+
+---
+
 ## 優先度・難易度マトリクス（実装順）
 
 | # | 機能 | 難易度 | 優先度 | 状態 |
@@ -15,7 +25,8 @@
 | 1 | 免責事項の追加 | 低 | 🔴 高 | 未着手 |
 | 2 | 個別ページに売り出し価格追加 | 中 | 🔴 高 | 未着手 |
 | 3 | Google Formアンケート追加 | 低 | 🟡 中 | 未着手（URLをユーザーが作成後） |
-| 4 | ログイン機能 + SaaS化 | 高 | 🟢 低〜中 | 設計のみ（実装は後フェーズ） |
+| 4 | ログイン機能（ベータ：招待制・課金なし） | 中 | 🟢 低〜中 | 設計のみ（実装は後フェーズ） |
+| 5 | 課金機能（Stripe）| 高 | 🔵 一般公開時 | ベータ期間は実装しない |
 
 ---
 
@@ -190,159 +201,143 @@ CONVEX_DEPLOYMENT=prod:precious-mongoose-658 npx convex run \
 
 ---
 
-## Step 4: ログイン機能 + SaaS化（詳細設計）
+## Step 4: ログイン機能（ベータ版：Clerk認証のみ、課金UI不要）
 
-### 概要
-定借ナビをID/パスワード認証付きの月額課金SaaSとして運用する。
+### ✅ 確定方針
+- **ベータ期間は課金UIを実装しない**。支払いは友人間で直接行う（現金・振込等）
+- **招待制（管理者発行）** でアカウントを管理。Clerkのダッシュボードからメール招待
+- Stripeは一般公開時に追加する（Step 5として分離）
 
-### アーキテクチャ設計
+### ベータ版アーキテクチャ（シンプル）
 
 ```
 [ユーザー]
-    ↓ メール/パスワード or Google OAuth
+    ↓ メール/パスワード（招待制）
 [Clerk] ← 認証プロバイダー（無料枠10,000MAU）
     ↓ JWT / ユーザーID
-[Next.js App Router]
+[Next.js App Router + middleware.ts]
     ↓ Convex Auth（Clerk連携）
-[Convex DB]
-    ↓ サブスクリプション状態確認
-[Stripe] ← 課金管理
-    ↓ Webhook → Convex mutation
-[Convex DB: subscriptions table]
+[Convex DB] ← ログインユーザーのみデータ閲覧可能
 ```
 
 ### 選定技術スタック
 
 | 役割 | 採用技術 | 理由 |
 |------|---------|------|
-| 認証 | **Clerk** | Next.js/Convex公式対応、日本語UI対応、無料10,000MAU |
-| 課金 | **Stripe** | 月額課金の業界標準、日本円対応、Webhook連携容易 |
+| 認証 | **Clerk** | Next.js/Convex公式対応、日本語UI対応、無料10,000MAU、招待機能あり |
 | 認可 | Convex Auth (Clerk連携) | ConvexのミドルウェアがClerk JWTを直接検証 |
 
-### DBスキーマ追加（`convex/schema.ts`）
+> **Stripeは使わない（ベータ期間）**。支払いは友人間で直接管理。
 
-```typescript
-// 既存に追加
-subscriptions: defineTable({
-  clerkUserId: v.string(),        // Clerk ユーザーID
-  stripeCustomerId: v.string(),   // Stripe Customer ID
-  stripeSubscriptionId: v.optional(v.string()),
-  status: v.union(
-    v.literal("active"),
-    v.literal("trialing"),
-    v.literal("past_due"),
-    v.literal("canceled"),
-    v.literal("incomplete"),
-  ),
-  planId: v.string(),             // "monthly_basic" | "monthly_pro"
-  currentPeriodEnd: v.number(),   // Unix timestamp
-  cancelAtPeriodEnd: v.boolean(),
-}).index("by_clerk_user_id", ["clerkUserId"])
-  .index("by_stripe_customer_id", ["stripeCustomerId"]),
-```
+### アカウント管理フロー（ベータ）
 
-### 実装ファイル一覧
+1. **管理者（自分）** がClerkダッシュボードで友人のメールアドレスを招待
+2. 友人がメールのリンクからアカウント作成（パスワード設定）
+3. `/analytics` 等の保護ページにログインして閲覧可能になる
+4. 未ログインのユーザーは `/sign-in` へリダイレクト
+
+### 実装ファイル一覧（ベータ版）
 
 ```
 convex/
-  auth.config.ts          # Clerk JWT設定
-  subscriptions.ts        # サブスクリプション queries/mutations
-  schema.ts               # subscriptionsテーブル追加
+  auth.config.ts          # Clerk JWT設定（Convex側）
 
 app/
   (auth)/
-    sign-in/page.tsx      # Clerkサインインページ
-    sign-up/page.tsx      # Clerkサインアップページ
+    sign-in/[[...sign-in]]/page.tsx   # Clerkサインインページ
   (protected)/
-    layout.tsx            # 認証ガード + サブスクリプション確認
+    layout.tsx            # 認証ガード（未ログイン→sign-inへ）
     analytics/            # 現行の analytics/ をここに移動
       page.tsx
       property/[id]/page.tsx
 
-  api/
-    webhooks/
-      stripe/route.ts     # Stripe Webhookハンドラー
-  
-  pricing/page.tsx        # 料金ページ
-  
 middleware.ts             # Clerk認証ミドルウェア（公開/保護ルート設定）
 
 components/
-  auth/
-    UserButton.tsx        # ヘッダーのユーザーメニュー
-  subscription/
-    SubscriptionGate.tsx  # サブスク有効確認ゲートコンポーネント
-    PricingCard.tsx       # 料金カード
+  layout/
+    Header.tsx            # ヘッダーにUserButton（ログアウト等）追加
+```
+
+### 実装ステップ（詳細）
+
+#### Step 4-1: Clerk セットアップ（2〜3時間）
+1. `npm install @clerk/nextjs`
+2. https://dashboard.clerk.com でアプリ作成
+3. Vercel環境変数に追加:
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...`
+   - `CLERK_SECRET_KEY=sk_live_...`
+4. `middleware.ts` を作成（保護ルート: `/analytics(.*)` 等）
+5. `app/layout.tsx` を `<ClerkProvider>` でラップ
+
+#### Step 4-2: Convex + Clerk 連携（1時間）
+1. `convex/auth.config.ts` を作成（Clerk JWT URL設定）
+2. Convex Dashboardで環境変数 `CLERK_JWT_ISSUER_DOMAIN` を設定
+
+#### Step 4-3: UIの対応（1〜2時間）
+1. ヘッダーに `<UserButton />` を追加（アバター + ログアウトメニュー）
+2. `/sign-in` ページ作成（Clerkの`<SignIn />`コンポーネントを使用）
+3. 未ログイン時のランディングページ（簡易的な説明 + ログインボタン）
+
+### 必要環境変数（ベータ版）
+
+```env
+# Clerk（Vercelに設定）
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
+CLERK_SECRET_KEY=sk_live_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/analytics
+
+# Convex
+CONVEX_DEPLOYMENT=prod:precious-mongoose-658
+```
+
+### 実装難易度: 中（ベータ版・課金なし）
+### 想定工数: 半日〜1日
+
+---
+
+## Step 5: 課金機能（Stripe）— 一般公開時
+
+> ⚠️ **ベータ期間は実装しない**。友人からは直接支払いを受け取る。
+
+### 概要
+ベータ終了後、一般公開時にStripeを導入して月額課金を自動化する。
+
+### アーキテクチャ（将来）
+
+```
+[Clerk認証] + [Stripe課金]
+    ↓
+[Convex DB: subscriptions table]
+    ↓ 有効サブスク確認
+[保護ページ閲覧可能]
 ```
 
 ### 料金プラン設計（案）
 
 | プラン | 月額 | 機能 |
 |--------|------|------|
-| 無料 | ¥0 | グラフ閲覧（過去データのみ）、物件一覧 |
-| ベーシック | ¥980/月 | 全成約データ閲覧、物件別詳細ページ |
-| プロ（将来）| ¥2,980/月 | 売り出し価格リアルタイム、シミュレーション、API |
+| ベーシック | ¥980/月 | 全成約データ閲覧、物件別詳細ページ、売り出し価格 |
+| プロ（将来）| ¥2,980/月 | シミュレーション、API、優先サポート |
 
-### アカウント作成方針
-
-**推奨: ベータ期間は招待制（管理者発行）→ 一般公開時はセルフサインアップ**
-
-- **ベータ期間（〜100ユーザー）**: Clerkの招待機能でメールアドレスを管理者が承認。スパム防止・フィードバック収集に有効。
-- **一般公開後**: セルフサインアップ可能（メール認証 or Google OAuth）。Clerkのセキュリティ設定（CAPTCHA等）で不正防止。
-
-### 実装ステップ（詳細）
-
-#### Phase 4-1: 認証基盤（1〜2日）
-1. `npm install @clerk/nextjs`
-2. Clerkダッシュボードでアプリ作成、環境変数設定
-   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-   - `CLERK_SECRET_KEY`
-3. `middleware.ts` でルート保護設定
-4. `convex/auth.config.ts` でClerk JWT設定
-5. ヘッダーにUserButtonを追加
-6. `/sign-in`, `/sign-up` ページ作成
-
-#### Phase 4-2: Stripe課金（1〜2日）
-1. `npm install stripe @stripe/stripe-js`
-2. Stripeダッシュボードで商品・価格を作成
-   - 環境変数: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
-3. `/api/webhooks/stripe/route.ts` でWebhookハンドラー作成
-   - `customer.subscription.created/updated/deleted` イベント処理
-4. Convex `subscriptions` テーブルへの書き込み
-
-#### Phase 4-3: 認可ゲート（半日）
-1. `SubscriptionGate.tsx` コンポーネント作成
-2. 保護ページのlayout.tsxに組み込み
-3. 未サブスク→料金ページへリダイレクト
-
-#### Phase 4-4: 料金ページ（半日）
-1. `/pricing/page.tsx` 作成
-2. Stripeのチェックアウトセッション作成APIを実装
-3. マイアカウントページ（サブスク管理）
-
-### 必要環境変数
-
-```env
-# Clerk
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/analytics
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/pricing
-
-# Stripe
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_PUBLISHABLE_KEY=pk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_ID_MONTHLY=price_...
-
-# Convex
-CONVEX_DEPLOYMENT=prod:precious-mongoose-658
+### DBスキーマ追加（将来）
+```typescript
+subscriptions: defineTable({
+  clerkUserId: v.string(),
+  stripeCustomerId: v.string(),
+  stripeSubscriptionId: v.optional(v.string()),
+  status: v.union(
+    v.literal("active"), v.literal("trialing"),
+    v.literal("past_due"), v.literal("canceled"),
+  ),
+  planId: v.string(),
+  currentPeriodEnd: v.number(),
+}).index("by_clerk_user_id", ["clerkUserId"])
+  .index("by_stripe_customer_id", ["stripeCustomerId"]),
 ```
 
-### 実装難易度: 高（外部サービス連携 + 認証フロー + 課金フロー）
-### 想定工数: 4〜6日
+### 実装難易度: 高（Stripe Webhook + 課金フロー）
+### 想定工数: 3〜4日（Step 4完了後に追加）
 
 ---
 
@@ -356,11 +351,16 @@ Week 1（現在）:
   [ ] Step 2: 売り出し価格表示追加
   [ ] Step 3: Google Form（URLをユーザーが作成後に実装）
 
-Week 2〜3:
-  [ ] Step 4-1: Clerk認証基盤
-  [ ] Step 4-2: Stripe課金
-  [ ] Step 4-3: 認可ゲート
-  [ ] Step 4-4: 料金ページ・マイアカウント
+Week 2:
+  [ ] Step 4-1: Clerk セットアップ
+  [ ] Step 4-2: Convex + Clerk 連携
+  [ ] Step 4-3: ヘッダーUI + ログインページ
+
+一般公開時（時期未定）:
+  [ ] Step 5-1: Stripe商品・価格設定
+  [ ] Step 5-2: Webhook + subscriptionsテーブル
+  [ ] Step 5-3: 認可ゲート（サブスク確認）
+  [ ] Step 5-4: 料金ページ・マイアカウント
 ```
 
 ---
