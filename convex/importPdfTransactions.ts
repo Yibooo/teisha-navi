@@ -153,6 +153,35 @@ export const fixPriceTypeBySource = mutation({
   },
 });
 
+// ── 南砂町以外の新築データを削除するマイグレーション ──────────────────────────
+export const deleteNewConstructionExcept = mutation({
+  args: { keepPropertyName: v.string() },
+  handler: async (ctx, args) => {
+    const properties = await ctx.db.query("properties").collect();
+    const keepProp = properties.find((p) => p.name === args.keepPropertyName);
+
+    // 削除前に対象一覧を収集
+    const allTx = await ctx.db.query("transactions").collect();
+    const targets = allTx.filter(
+      (t) =>
+        (t.priceType === "new_construction" || t.isNewConstruction === true) &&
+        t.propertyId !== keepProp?._id
+    );
+
+    const deletedNames = targets.map((t) => {
+      const prop = properties.find((p) => p._id === t.propertyId);
+      return prop?.name ?? "不明";
+    });
+
+    let deleted = 0;
+    for (const t of targets) {
+      await ctx.db.delete(t._id);
+      deleted++;
+    }
+    return { deleted, deletedPropertyNames: [...new Set(deletedNames)] };
+  },
+});
+
 // ── transactionYearQ を "YYYYQn" → "YYYY-MM" に一括更新するマイグレーション ──
 // transactionDate を持つレコード（REINS PDFインポート分）のみ対象
 export const migrateYearQToYearMonth = internalMutation({

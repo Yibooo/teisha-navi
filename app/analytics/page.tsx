@@ -199,9 +199,10 @@ export default function AnalyticsPage() {
           </ul>
         </div>
         <div className="bg-amber-50 rounded-xl p-5 border border-amber-100">
-          <h3 className="font-semibold text-amber-900 mb-2">⚠️ 注意事項</h3>
+          <h3 className="font-semibold text-amber-900 mb-2">⚠️ 注意事項・免責</h3>
           <ul className="text-sm text-amber-800 space-y-1 leading-relaxed">
             <li>• 本グラフは過去の取引データに基づく参考情報です</li>
+            <li>• 価格情報は随時更新される場合があります。最新情報は各物件の販売会社・REINS等にてご確認ください</li>
             <li>• 将来の価値を保証するものではありません</li>
             <li>• 個別物件の状況により価格は大きく異なります</li>
             <li>• 投資判断は専門家にご相談ください</li>

@@ -196,6 +196,23 @@ export const getPropertyChartData = query({
     const leaseEndYear = property.leaseStartYear + property.leaseTotalYears;
     const currentYear = 2026;
 
+    // 売り出し価格データ
+    const listings = allTx
+      .filter((t) => t.priceType === "listing")
+      .map((t) => ({
+        price: t.price,
+        areaSqm: t.areaSqm,
+        floor: t.floor ?? null,
+        layout: t.layout ?? null,
+        pricePerTsubo:
+          Math.round((t.pricePerTsubo ?? t.pricePerSqm * 3.30578) * 10) / 10,
+        transactionDate: t.transactionDate ?? null,
+        transactionYearQ: t.transactionYearQ ?? null,
+      }))
+      .sort((a, b) =>
+        (b.transactionDate ?? "").localeCompare(a.transactionDate ?? "")
+      );
+
     return {
       property: {
         _id: property._id,
@@ -211,6 +228,7 @@ export const getPropertyChartData = query({
       points,
       newConstructionPricePerTsubo,
       totalTransactions: txOnly.length,
+      listingData: listings,
     };
   },
 });
