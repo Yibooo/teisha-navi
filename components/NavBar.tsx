@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
 
 export function NavBar() {
   return (
@@ -7,17 +10,34 @@ export function NavBar() {
         <Link href="/" className="font-bold text-lg text-slate-900 hover:text-slate-700">
           定借ナビ
         </Link>
-        <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
-          <Link href="/analytics" className="hover:text-slate-900 transition-colors">
-            資産価値グラフ
-          </Link>
-          <Link href="/simulator" className="hover:text-slate-900 transition-colors">
-            シミュレーター
-          </Link>
-          <Link href="/about" className="hover:text-slate-900 transition-colors">
-            このサービスについて
-          </Link>
-        </nav>
+        <div className="flex items-center gap-6">
+          <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
+            <Link href="/analytics" className="hover:text-slate-900 transition-colors">
+              資産価値グラフ
+            </Link>
+            <Link href="/simulator" className="hover:text-slate-900 transition-colors">
+              シミュレーター
+            </Link>
+            <Link href="/about" className="hover:text-slate-900 transition-colors">
+              このサービスについて
+            </Link>
+          </nav>
+
+          {/* ログイン済み: アバターアイコン（クリックでログアウトメニュー） */}
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
+
+          {/* 未ログイン: ログインボタン */}
+          <SignedOut>
+            <Link
+              href="/sign-in"
+              className="text-sm font-medium px-4 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition-colors"
+            >
+              ログイン
+            </Link>
+          </SignedOut>
+        </div>
       </div>
     </header>
   );
