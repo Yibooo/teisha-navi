@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { UserButton, useAuth } from "@clerk/nextjs";
 
 export function NavBar() {
+  const { isSignedIn } = useAuth();
+
   return (
     <header className="border-b bg-white sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -24,19 +26,19 @@ export function NavBar() {
           </nav>
 
           {/* ログイン済み: アバターアイコン（クリックでログアウトメニュー） */}
-          <SignedIn>
-            <UserButton afterSignOutUrl="/" />
-          </SignedIn>
+          {isSignedIn && (
+            <UserButton />
+          )}
 
           {/* 未ログイン: ログインボタン */}
-          <SignedOut>
+          {!isSignedIn && (
             <Link
               href="/sign-in"
               className="text-sm font-medium px-4 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition-colors"
             >
               ログイン
             </Link>
-          </SignedOut>
+          )}
         </div>
       </div>
     </header>
