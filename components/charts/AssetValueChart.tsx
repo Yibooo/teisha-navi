@@ -121,7 +121,7 @@ export function AssetValueChart({ data, newConstructionPoints = [] }: Props) {
           )}
         </p>
         <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+          <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
               dataKey="bucketMin"
@@ -133,8 +133,8 @@ export function AssetValueChart({ data, newConstructionPoints = [] }: Props) {
             <YAxis tickFormatter={(v) => `${v}万`} />
             <Tooltip content={<CustomTooltip />} />
             <Legend verticalAlign="top" />
-            <Bar data={data} dataKey="avgPricePerTsubo" name="平均坪単価（万円/坪）" fill="#6ee7b7" radius={[3, 3, 0, 0]} />
-            <Line data={data} dataKey="medianPricePerTsubo" name="中央値坪単価（万円/坪）" type="monotone" stroke="#059669" strokeWidth={2} dot={{ r: 4 }} />
+            <Bar dataKey="avgPricePerTsubo" name="平均坪単価（万円/坪）" fill="#6ee7b7" radius={[3, 3, 0, 0]} />
+            <Line dataKey="medianPricePerTsubo" name="中央値坪単価（万円/坪）" type="monotone" stroke="#059669" strokeWidth={2} dot={{ r: 4 }} />
             {newConstructionPoints.length > 0 && (
               <Scatter
                 data={newConstructionPoints.map((p) => ({
