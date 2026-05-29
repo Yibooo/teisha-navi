@@ -5,7 +5,6 @@ import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { NavBar } from "@/components/NavBar";
 import { ClerkProvider } from "@clerk/nextjs";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
-import { jaJP } from "@clerk/localizations";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
@@ -23,12 +22,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider
-      localization={jaJP}
-      signInUrl="/sign-in"
-      afterSignInUrl="/analytics"
-      afterSignUpUrl="/analytics"
-    >
+    <ClerkProvider>
       <html lang="ja" className={geist.variable}>
         <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
           <PostHogProvider>
