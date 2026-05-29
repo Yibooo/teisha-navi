@@ -191,7 +191,6 @@ export default function AnalyticsPage() {
         <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
           <h3 className="font-semibold text-blue-900 mb-2">📈 グラフの見方</h3>
           <ul className="text-sm text-blue-800 space-y-1 leading-relaxed">
-            <li>• データ：REINS実成約価格（売り出し価格ではなく、実際に取引が成立した価格）</li>
             <li>• 横軸：成約時点での残存借地権年数</li>
             <li>• 縦軸（上段）：新築時価格を100%とした場合の比率</li>
             <li>• 縦軸（下段）：坪単価（万円/坪）</li>
