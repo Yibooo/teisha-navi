@@ -187,7 +187,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* 解説 */}
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 gap-4 mb-8">
         <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
           <h3 className="font-semibold text-blue-900 mb-2">📈 グラフの見方</h3>
           <ul className="text-sm text-blue-800 space-y-1 leading-relaxed">
@@ -208,6 +208,27 @@ export default function AnalyticsPage() {
             <li>• 投資判断は専門家にご相談ください</li>
           </ul>
         </div>
+      </div>
+
+      {/* アンケートCTA */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 text-center">
+        <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-3">User Survey</p>
+        <h3 className="text-xl font-bold text-white mb-2">
+          定借ナビをより良くするために、ご意見をお聞かせください
+        </h3>
+        <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+          所要時間は約2〜3分です。いただいたご意見はサービス改善に直接活用します。<br className="hidden sm:block" />
+          定借マンションの情報をもっと使いやすく・充実させるために、ぜひご協力ください。
+        </p>
+        <a
+          href="https://forms.gle/DuAXHBX7yGTY24296"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-white text-slate-900 font-semibold rounded-xl hover:bg-slate-100 transition-colors text-sm shadow"
+        >
+          アンケートに答える（2〜3分）→
+        </a>
+        <p className="text-slate-500 text-xs mt-4">匿名回答・個人情報の入力不要</p>
       </div>
     </div>
   );
