@@ -185,8 +185,9 @@ export function SimulatorForm() {
                   tickFormatter={(v) => `${v}年後`}
                 />
                 <YAxis
-                  tickFormatter={(v) => `${(v / 10000).toFixed(1)}億`}
+                  tickFormatter={(v) => `${Number(v).toLocaleString()}万`}
                   domain={["auto", "auto"]}
+                  width={70}
                 />
                 <Tooltip
                   formatter={(v) => [`${Number(v).toLocaleString()}万円`, "予測売却価格"]}
