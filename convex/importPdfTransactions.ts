@@ -182,6 +182,87 @@ export const deleteNewConstructionExcept = mutation({
   },
 });
 
+// ── Excelから新築坪単価を一括インポート ────────────────────────────────────────
+export const importNewConstructionPrices = mutation({
+  args: {
+    items: v.array(
+      v.object({
+        propertyName: v.string(),
+        pricePerTsubo: v.number(), // 万円/坪
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const results = {
+      inserted: 0,
+      deleted: 0,
+      notFound: 0,
+      errors: [] as string[],
+    };
+
+    const allProps = await ctx.db.query("properties").collect();
+
+    for (const item of args.items) {
+      // 物件マスタを検索（完全一致 → 正規化一致）
+      const property =
+        allProps.find((p) => p.name === item.propertyName) ??
+        allProps.find(
+          (p) => normalizeName(p.name) === normalizeName(item.propertyName)
+        );
+
+      if (!property) {
+        results.notFound++;
+        results.errors.push(`「${item.propertyName}」が物件マスタに見つかりません`);
+        continue;
+      }
+
+      // 既存の new_construction レコードを削除
+      const existingNewConst = await ctx.db
+        .query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", property._id))
+        .collect();
+      const toDelete = existingNewConst.filter(
+        (t) => t.priceType === "new_construction" || t.isNewConstruction === true
+      );
+      for (const t of toDelete) {
+        await ctx.db.delete(t._id);
+        results.deleted++;
+      }
+
+      // 単価変換
+      const pricePerSqm =
+        Math.round((item.pricePerTsubo / 3.30578) * 100) / 100; // 万円/m²
+      const price = Math.round(pricePerSqm * 70); // 70m²代表面積
+
+      // 新築時 = 借地開始年、残存 = leaseTotalYears
+      const transactionYear = property.leaseStartYear;
+      const remainingLeaseYears = property.leaseTotalYears;
+      const transactionYearQ = `${transactionYear}-01`;
+      const transactionDate = `${transactionYear}-01-01`;
+
+      await ctx.db.insert("transactions", {
+        propertyId: property._id,
+        transactionYear,
+        transactionYearQ,
+        transactionDate,
+        remainingLeaseYears,
+        price,
+        areaSqm: 70,
+        pricePerSqm,
+        pricePerTsubo: item.pricePerTsubo,
+        isNewConstruction: true,
+        priceType: "new_construction",
+        source: "manual-excel",
+        sourceRecordId: `manual-new-const-${property._id}`,
+      });
+
+      results.inserted++;
+    }
+
+    return results;
+  },
+});
+
 // ── transactionYearQ を "YYYYQn" → "YYYY-MM" に一括更新するマイグレーション ──
 // transactionDate を持つレコード（REINS PDFインポート分）のみ対象
 export const migrateYearQToYearMonth = internalMutation({
