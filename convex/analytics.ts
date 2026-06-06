@@ -109,6 +109,46 @@ export const getPropertiesWithDataCounts = query({
       .map((p) => {
         const propTx = allTx.filter((t) => t.propertyId === p._id);
         const leaseEndYear = p.leaseStartYear + p.leaseTotalYears;
+
+        // 新築坪単価
+        const newTx = propTx.filter(
+          (t) => t.priceType === "new_construction" || t.isNewConstruction
+        );
+        const newConstructionPricePerTsubo =
+          newTx.length > 0
+            ? newTx.reduce(
+                (a, t) => a + (t.pricePerTsubo ?? t.pricePerSqm * 3.30578),
+                0
+              ) / newTx.length
+            : null;
+
+        // 最新成約坪単価（transactionDate降順で1件目）
+        const transactions = propTx
+          .filter(
+            (t) =>
+              t.priceType === "transaction" ||
+              (!t.isNewConstruction && !t.priceType)
+          )
+          .sort((a, b) =>
+            (b.transactionDate ?? b.transactionYearQ ?? "").localeCompare(
+              a.transactionDate ?? a.transactionYearQ ?? ""
+            )
+          );
+        const latestTx = transactions[0];
+        const latestTransactionPricePerTsubo = latestTx
+          ? (latestTx.pricePerTsubo ?? latestTx.pricePerSqm * 3.30578)
+          : null;
+
+        // 新築比（%）
+        const priceRatio =
+          newConstructionPricePerTsubo != null &&
+          latestTransactionPricePerTsubo != null
+            ? Math.round(
+                (latestTransactionPricePerTsubo / newConstructionPricePerTsubo) *
+                  1000
+              ) / 10
+            : null;
+
         return {
           _id: p._id,
           name: p.name,
@@ -119,14 +159,18 @@ export const getPropertiesWithDataCounts = query({
           totalUnits: p.totalUnits,
           nearestStation: p.nearestStation,
           walkMinutes: p.walkMinutes,
-          dataNew: propTx.filter((t) =>
-            t.priceType === "new_construction" || t.isNewConstruction
-          ).length,
+          dataNew: newTx.length,
           dataListing: propTx.filter((t) => t.priceType === "listing").length,
-          dataTransaction: propTx.filter((t) =>
-            t.priceType === "transaction" ||
-            (!t.isNewConstruction && !t.priceType)
-          ).length,
+          dataTransaction: transactions.length,
+          newConstructionPricePerTsubo:
+            newConstructionPricePerTsubo != null
+              ? Math.round(newConstructionPricePerTsubo * 10) / 10
+              : null,
+          latestTransactionPricePerTsubo:
+            latestTransactionPricePerTsubo != null
+              ? Math.round(latestTransactionPricePerTsubo * 10) / 10
+              : null,
+          priceRatio,
         };
       })
       .sort((a, b) => (b.totalUnits ?? 0) - (a.totalUnits ?? 0));

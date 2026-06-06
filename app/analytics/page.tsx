@@ -114,22 +114,46 @@ export default function AnalyticsPage() {
                 <th className="text-right px-4 py-3 font-medium text-slate-600">残存年数</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">総戸数</th>
                 <th className="text-left px-4 py-3 font-medium text-slate-600">最寄駅</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-600">新築比</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-600">データ</th>
               </tr>
             </thead>
             <tbody>
               {propertiesWithData === undefined ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-6 text-center text-slate-400 text-sm">読み込み中...</td>
+                  <td colSpan={10} className="px-4 py-6 text-center text-slate-400 text-sm">読み込み中...</td>
                 </tr>
               ) : propertiesWithData.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-6 text-center text-slate-400 text-sm">
+                  <td colSpan={10} className="px-4 py-6 text-center text-slate-400 text-sm">
                     {selectedWard === "all" ? "物件データがありません" : `${selectedWard}の物件データがありません`}
                   </td>
                 </tr>
               ) : (
-                propertiesWithData.map((p) => (
+                propertiesWithData.map((p) => {
+                  // 新築比の色・ラベル
+                  const ratio = p.priceRatio;
+                  const ratioBadge = (() => {
+                    if (ratio == null) return null;
+                    if (ratio >= 100) return {
+                      bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200",
+                      arrow: "↑", label: `${ratio.toFixed(1)}%`,
+                    };
+                    if (ratio >= 80) return {
+                      bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200",
+                      arrow: "↓", label: `${ratio.toFixed(1)}%`,
+                    };
+                    if (ratio >= 60) return {
+                      bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200",
+                      arrow: "↓", label: `${ratio.toFixed(1)}%`,
+                    };
+                    return {
+                      bg: "bg-red-50", text: "text-red-700", border: "border-red-200",
+                      arrow: "↓↓", label: `${ratio.toFixed(1)}%`,
+                    };
+                  })();
+
+                  return (
                   <tr key={p._id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-medium">
                       <Link
@@ -156,6 +180,22 @@ export default function AnalyticsPage() {
                     <td className="px-4 py-3 text-slate-600">
                       {p.nearestStation ? `${p.nearestStation}駅 徒歩${p.walkMinutes}分` : "—"}
                     </td>
+                    {/* 新築比 */}
+                    <td className="px-4 py-3 text-right">
+                      {ratioBadge ? (
+                        <div className="inline-flex flex-col items-end gap-0.5">
+                          <span className={`inline-flex items-center gap-1 text-sm font-bold px-2 py-0.5 rounded-md border ${ratioBadge.bg} ${ratioBadge.text} ${ratioBadge.border}`}>
+                            <span className="text-xs">{ratioBadge.arrow}</span>
+                            {ratioBadge.label}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            新築{p.newConstructionPricePerTsubo}→直近{p.latestTransactionPricePerTsubo}万/坪
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-300 text-sm">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1 flex-wrap">
                         {p.dataNew > 0 && (
@@ -179,7 +219,8 @@ export default function AnalyticsPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
