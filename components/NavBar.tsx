@@ -20,6 +20,9 @@ export function NavBar() {
             <Link href="/simulator" className="hover:text-slate-900 transition-colors">
               シミュレーター
             </Link>
+            <Link href="/teisyaku-basics" className="hover:text-slate-900 transition-colors">
+              定借マンションとは？
+            </Link>
             <Link href="/about" className="hover:text-slate-900 transition-colors">
               このサービスについて
             </Link>
