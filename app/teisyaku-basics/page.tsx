@@ -177,12 +177,11 @@ export default function TeisyakuBasicsPage() {
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-              <p className="font-bold text-slate-900 mb-2">⚠️ 注意点③：残存年数が短くなると資産価値が下がりやすい</p>
+              <p className="font-bold text-slate-900 mb-2">⚠️ 注意点③：資産価値の判断は所有権より慎重に</p>
               <p className="text-sm text-slate-600">
-                残存年数が少なくなるほど将来の価値が下がるため、
-                <strong>売却しにくくなる・価格が下がる</strong>リスクがあります。
-                定借ナビの「資産価値グラフ」では、残存年数別の坪単価推移を確認できます。
-                残存30年以下では特に注意が必要です。
+                定借マンションは残存年数という固有の要素があるため、所有権マンションと同じ感覚では資産価値を測れません。
+                価格は上がることも下がることもあり、<strong>物件ごとに実際の取引データを確認することが不可欠</strong>です。
+                定借ナビの「資産価値グラフ」を活用してください。
               </p>
             </div>
           </div>
