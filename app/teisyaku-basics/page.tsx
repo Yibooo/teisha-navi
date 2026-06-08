@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function TeisyakuBasicsPage() {
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
+    <div className="max-w-3xl mx-auto px-4 py-6 sm:py-10">
       <div className="mb-10">
         <p className="text-sm font-semibold text-blue-600 tracking-widest uppercase mb-2">Basic Guide</p>
         <h1 className="text-3xl font-bold text-slate-900 mb-3">
@@ -20,7 +20,7 @@ export default function TeisyakuBasicsPage() {
       </div>
 
       {/* タブナビ（ページ内アンカー） */}
-      <div className="flex flex-wrap gap-2 mb-10 border-b border-slate-200 pb-4">
+      <div className="flex gap-2 overflow-x-auto pb-1 mb-10 border-b border-slate-200 pb-4">
         {[
           { href: "#what", label: "仕組み" },
           { href: "#merit", label: "メリット" },
@@ -198,7 +198,7 @@ export default function TeisyakuBasicsPage() {
           </p>
 
           <div className="overflow-x-auto mb-6">
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full min-w-[480px] text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-900 text-white">
                   <th className="text-left p-3 rounded-tl-lg">費用の種類</th>
@@ -263,7 +263,7 @@ export default function TeisyakuBasicsPage() {
           </h2>
 
           <div className="overflow-x-auto mb-6">
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full min-w-[480px] text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-100">
                   <th className="text-left p-3 border-b border-slate-200">税金の種類</th>

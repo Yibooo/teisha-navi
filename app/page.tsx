@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="max-w-6xl mx-auto px-4">
       {/* Hero */}
-      <section className="py-20 text-center">
+      <section className="py-10 sm:py-20 text-center">
         <Badge variant="secondary" className="mb-4">東京23区 実取引データ使用</Badge>
         <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl mb-6 leading-tight">
           定期借地権マンションの<br />
@@ -90,7 +90,7 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 text-center">
+      <section className="py-8 sm:py-16 text-center">
         <div className="bg-blue-600 rounded-3xl px-8 py-14 text-white">
           <h2 className="text-2xl font-bold mb-4">まずはグラフで実績を確認</h2>
           <p className="text-blue-100 mb-8 max-w-md mx-auto">

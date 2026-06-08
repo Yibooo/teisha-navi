@@ -90,7 +90,7 @@ export function AssetValueChart({ data, newConstructionPoints = [] }: Props) {
           </div>
         ) : (
         <ResponsiveContainer width="100%" height={320}>
-          <ComposedChart data={ratioData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+          <ComposedChart data={ratioData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
               dataKey="bucketMin"
@@ -121,7 +121,7 @@ export function AssetValueChart({ data, newConstructionPoints = [] }: Props) {
           )}
         </p>
         <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+          <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
               dataKey="bucketMin"

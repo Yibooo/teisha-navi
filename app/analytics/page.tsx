@@ -63,10 +63,11 @@ export default function AnalyticsPage() {
 
       {/* フィルター */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-8 flex flex-wrap gap-4 items-center">
-        <div className="flex items-center gap-2">
+        <p className="text-xs text-slate-400 sm:hidden w-full mb-1">← 横スクロールで全列表示 →</p>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <label className="text-sm font-medium text-slate-700">エリア</label>
           <Select value={selectedWard} onValueChange={(v) => setSelectedWard(v ?? "all")}>
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-full sm:w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -107,13 +108,13 @@ export default function AnalyticsPage() {
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-slate-600">マンション名</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">区</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-600">竣工</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-600">新築時残存</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-600">借地期限</th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 font-medium text-slate-600">区</th>
+                <th className="hidden sm:table-cell text-right px-4 py-3 font-medium text-slate-600">竣工</th>
+                <th className="hidden sm:table-cell text-right px-4 py-3 font-medium text-slate-600">新築時残存</th>
+                <th className="hidden sm:table-cell text-right px-4 py-3 font-medium text-slate-600">借地期限</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">残存年数</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-600">総戸数</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">最寄駅</th>
+                <th className="hidden sm:table-cell text-right px-4 py-3 font-medium text-slate-600">総戸数</th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 font-medium text-slate-600">最寄駅</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">新築比</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-600">データ</th>
               </tr>
@@ -163,10 +164,10 @@ export default function AnalyticsPage() {
                         {p.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{p.ward}</td>
-                    <td className="px-4 py-3 text-right text-slate-600">{p.buildingYear}年</td>
-                    <td className="px-4 py-3 text-right text-slate-600">{p.leaseEndYear - p.buildingYear}年</td>
-                    <td className="px-4 py-3 text-right text-slate-600">{p.leaseEndYear}年</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-slate-600">{p.ward}</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-right text-slate-600">{p.buildingYear}年</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-right text-slate-600">{p.leaseEndYear - p.buildingYear}年</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-right text-slate-600">{p.leaseEndYear}年</td>
                     <td className="px-4 py-3 text-right">
                       <span className={
                         p.remainingYears < 25 ? "text-red-600 font-semibold" :
@@ -176,8 +177,8 @@ export default function AnalyticsPage() {
                         {p.remainingYears}年
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-600">{p.totalUnits ?? "—"}戸</td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="hidden sm:table-cell px-4 py-3 text-right text-slate-600">{p.totalUnits ?? "—"}戸</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-slate-600">
                       {p.nearestStation ? `${p.nearestStation}駅 徒歩${p.walkMinutes}分` : "—"}
                     </td>
                     {/* 新築比 */}

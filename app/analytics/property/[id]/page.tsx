@@ -69,7 +69,7 @@ export default function PropertyAnalyticsPage() {
   const maxListingTsubo = hasListings ? Math.max(...listingTsuboPrices) : null;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10">
+    <div className="max-w-5xl mx-auto px-4 py-6 sm:py-10">
       {/* パンくず */}
       <div className="text-sm text-slate-400 mb-6">
         <Link href="/analytics" className="hover:text-slate-600 transition-colors">
@@ -117,7 +117,7 @@ export default function PropertyAnalyticsPage() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={360}>
-            <ComposedChart data={points} margin={{ top: 10, right: 160, left: 10, bottom: 10 }}>
+            <ComposedChart data={points} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis
                 dataKey="remainingYears"
