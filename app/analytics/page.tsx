@@ -81,7 +81,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* グラフ */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 mb-8">
         {chartData === undefined ? (
           <div className="flex items-center justify-center h-80">
             <div className="text-slate-400">データを読み込み中...</div>
@@ -93,7 +93,7 @@ export default function AnalyticsPage() {
 
       {/* 対象物件一覧 */}
       <div className="bg-white rounded-2xl border border-slate-200 mb-8 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="font-semibold text-slate-900">
             対象物件一覧
             {propertiesWithData && (
@@ -102,9 +102,10 @@ export default function AnalyticsPage() {
               </span>
             )}
           </h2>
+          <span className="text-xs text-slate-400 sm:hidden">← スクロール →</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[340px]">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-slate-600">マンション名</th>
@@ -197,21 +198,24 @@ export default function AnalyticsPage() {
                         <span className="text-slate-300 text-sm">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-1 flex-wrap">
+                    <td className="px-3 py-3">
+                      <div className="flex items-center justify-center gap-1 flex-nowrap">
                         {p.dataNew > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
-                            新築{p.dataNew}
+                          <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded whitespace-nowrap">
+                            <span className="sm:hidden">新{p.dataNew}</span>
+                            <span className="hidden sm:inline">新築{p.dataNew}</span>
                           </span>
                         )}
                         {p.dataListing > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
-                            売出{p.dataListing}
+                          <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded whitespace-nowrap">
+                            <span className="sm:hidden">売{p.dataListing}</span>
+                            <span className="hidden sm:inline">売出{p.dataListing}</span>
                           </span>
                         )}
                         {p.dataTransaction > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
-                            成約{p.dataTransaction}
+                          <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded whitespace-nowrap">
+                            <span className="sm:hidden">約{p.dataTransaction}</span>
+                            <span className="hidden sm:inline">成約{p.dataTransaction}</span>
                           </span>
                         )}
                         {p.dataNew === 0 && p.dataListing === 0 && p.dataTransaction === 0 && (
