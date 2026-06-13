@@ -263,6 +263,106 @@ export const importNewConstructionPrices = mutation({
   },
 });
 
+// ── 重複物件マスタの統合 ────────────────────────────────────────────────────
+// removeId の取引を keepId に付け替え、removeId（重複マスタ）を削除する。
+// 取引データそのものは削除しない（propertyId を付け替えるのみ）。
+export const mergeProperties = mutation({
+  args: {
+    pairs: v.array(
+      v.object({
+        keepId: v.id("properties"),
+        removeId: v.id("properties"),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const results = {
+      moved: 0,
+      deletedProps: 0,
+      details: [] as Array<{
+        keep: string;
+        remove: string;
+        moved: number;
+      }>,
+    };
+
+    for (const { keepId, removeId } of args.pairs) {
+      const keep = await ctx.db.get(keepId);
+      const remove = await ctx.db.get(removeId);
+      if (!keep || !remove) {
+        results.details.push({
+          keep: keepId,
+          remove: removeId,
+          moved: -1, // どちらかが見つからない
+        });
+        continue;
+      }
+
+      const txs = await ctx.db
+        .query("transactions")
+        .withIndex("by_property", (q) => q.eq("propertyId", removeId))
+        .collect();
+
+      let moved = 0;
+      for (const t of txs) {
+        await ctx.db.patch(t._id, { propertyId: keepId });
+        moved++;
+        results.moved++;
+      }
+
+      await ctx.db.delete(removeId);
+      results.deletedProps++;
+
+      results.details.push({
+        keep: `${keep.name}(${keep.ward})`,
+        remove: `${remove.name}(${remove.ward})`,
+        moved,
+      });
+    }
+
+    return results;
+  },
+});
+
+// ── 残存年数の再計算 ────────────────────────────────────────────────────────
+// 各取引の remainingLeaseYears を、紐づく物件の (leaseStartYear + leaseTotalYears)
+// − transactionYear で再計算する。統合で物件を付け替えた取引の残存年数ズレを補正する。
+// 非統合物件ではインポート時と同じ値になる（冪等）。
+export const recomputeRemainingYears = mutation({
+  args: {
+    propertyIds: v.optional(v.array(v.id("properties"))),
+  },
+  handler: async (ctx, args) => {
+    const props = await ctx.db.query("properties").collect();
+    const propMap = new Map(props.map((p) => [p._id, p]));
+
+    const targetIds = args.propertyIds
+      ? new Set(args.propertyIds.map((id) => id as string))
+      : null;
+
+    const allTx = await ctx.db.query("transactions").collect();
+    let updated = 0;
+    let skipped = 0;
+
+    for (const t of allTx) {
+      if (targetIds && !targetIds.has(t.propertyId as string)) continue;
+      const p = propMap.get(t.propertyId);
+      if (!p) {
+        skipped++;
+        continue;
+      }
+      const leaseEndYear = p.leaseStartYear + p.leaseTotalYears;
+      const correct = leaseEndYear - t.transactionYear;
+      if (t.remainingLeaseYears !== correct) {
+        await ctx.db.patch(t._id, { remainingLeaseYears: correct });
+        updated++;
+      }
+    }
+
+    return { updated, skipped, totalScanned: allTx.length };
+  },
+});
+
 // ── transactionYearQ を "YYYYQn" → "YYYY-MM" に一括更新するマイグレーション ──
 // transactionDate を持つレコード（REINS PDFインポート分）のみ対象
 export const migrateYearQToYearMonth = internalMutation({
