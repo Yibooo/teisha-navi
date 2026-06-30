@@ -1,3 +1,5 @@
+import { AuthAwareLink } from "@/components/AuthAwareLink";
+
 export const metadata = {
   title: "そもそも定借マンションとは？｜定借ナビ",
   description:
@@ -357,18 +359,18 @@ export default function TeisyakuBasicsPage() {
             実際の取引データで資産価値を確認しよう
           </h3>
           <div className="flex flex-wrap justify-center gap-3">
-            <a
-              href="/analytics"
+            <AuthAwareLink
+              to="analytics"
               className="inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-900 font-semibold rounded-xl hover:bg-blue-50 transition-colors text-sm shadow"
             >
               📊 資産価値グラフを見る →
-            </a>
-            <a
-              href="/simulator"
+            </AuthAwareLink>
+            <AuthAwareLink
+              to="simulator"
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-700 text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors text-sm shadow border border-blue-600"
             >
               🔢 将来価値をシミュレーション →
-            </a>
+            </AuthAwareLink>
           </div>
         </section>
 

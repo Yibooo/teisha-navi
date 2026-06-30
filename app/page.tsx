@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AuthAwareLink } from "@/components/AuthAwareLink";
 import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
@@ -17,18 +17,18 @@ export default function Home() {
           購入・売却の意思決定を数値でサポートします。
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            href="/analytics"
+          <AuthAwareLink
+            to="analytics"
             className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-8 py-3 text-base font-semibold text-white hover:bg-blue-700 transition-colors"
           >
             資産価値グラフを見る →
-          </Link>
-          <Link
-            href="/simulator"
+          </AuthAwareLink>
+          <AuthAwareLink
+            to="simulator"
             className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-8 py-3 text-base font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
           >
             将来価値をシミュレーション
-          </Link>
+          </AuthAwareLink>
         </div>
       </section>
 
@@ -96,12 +96,12 @@ export default function Home() {
           <p className="text-blue-100 mb-8 max-w-md mx-auto">
             残存年数が変わると資産価値はどう変わるのか。過去の取引データを一目で確認できます。
           </p>
-          <Link
-            href="/analytics"
+          <AuthAwareLink
+            to="analytics"
             className="inline-flex items-center justify-center rounded-lg bg-white px-8 py-3 text-base font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
           >
             グラフを見る →
-          </Link>
+          </AuthAwareLink>
         </div>
       </section>
 
