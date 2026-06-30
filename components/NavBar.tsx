@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { UserButton, useAuth } from "@clerk/nextjs";
 import { useState } from "react";
-import { AuthAwareLink } from "@/components/AuthAwareLink";
+import { PublicNavLink } from "@/components/PublicNavLink";
 
 export function NavBar() {
   const { isSignedIn } = useAuth();
@@ -19,12 +19,12 @@ export function NavBar() {
         {/* Desktop nav */}
         <div className="hidden sm:flex items-center gap-6">
           <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
-            <AuthAwareLink to="analytics" className="hover:text-slate-900 transition-colors">
+            <PublicNavLink to="analytics" className="hover:text-slate-900 transition-colors">
               資産価値グラフ
-            </AuthAwareLink>
-            <AuthAwareLink to="simulator" className="hover:text-slate-900 transition-colors">
+            </PublicNavLink>
+            <PublicNavLink to="simulator" className="hover:text-slate-900 transition-colors">
               シミュレーター
-            </AuthAwareLink>
+            </PublicNavLink>
             <Link href="/teisyaku-basics" className="hover:text-slate-900 transition-colors">
               定借マンションとは？
             </Link>
@@ -68,12 +68,12 @@ export function NavBar() {
       {/* Mobile dropdown menu */}
       {menuOpen && (
         <div className="sm:hidden border-t border-slate-100 bg-white px-4 py-3 flex flex-col gap-3 text-sm font-medium text-slate-700">
-          <AuthAwareLink to="analytics" onClick={() => setMenuOpen(false)} className="hover:text-slate-900 transition-colors py-1">
+          <PublicNavLink to="analytics" onClick={() => setMenuOpen(false)} className="hover:text-slate-900 transition-colors py-1">
             資産価値グラフ
-          </AuthAwareLink>
-          <AuthAwareLink to="simulator" onClick={() => setMenuOpen(false)} className="hover:text-slate-900 transition-colors py-1">
+          </PublicNavLink>
+          <PublicNavLink to="simulator" onClick={() => setMenuOpen(false)} className="hover:text-slate-900 transition-colors py-1">
             シミュレーター
-          </AuthAwareLink>
+          </PublicNavLink>
           <Link href="/teisyaku-basics" onClick={() => setMenuOpen(false)} className="hover:text-slate-900 transition-colors py-1">
             定借マンションとは？
           </Link>
