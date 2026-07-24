@@ -35,31 +35,49 @@ const WALK_LABEL: Record<string, string> = {
   w10up: "徒歩10分以上",
 };
 
+// 駅徒歩バケット判定（フロント側フィルター用）。徒歩不明(null)はバケット選択時は除外。
+function inWalkBucket(walk: number | null | undefined, bucket: string): boolean {
+  if (bucket === "all") return true;
+  if (walk == null) return false;
+  if (bucket === "w0_5") return walk <= 5;
+  if (bucket === "w6_9") return walk >= 6 && walk <= 9;
+  if (bucket === "w10up") return walk >= 10;
+  return true;
+}
+
 export default function PublicAnalyticsPage() {
   const [selectedWard, setSelectedWard] = useState<string>("all");
   const [walkBucket, setWalkBucket] = useState<string>("all");
 
   const wardArg = selectedWard === "all" ? undefined : selectedWard;
-  const walkArg = walkBucket === "all" ? undefined : walkBucket;
 
-  const chartData = useQuery(api.analytics.getChartData, {
-    ward: wardArg,
-    walkBucket: walkArg,
-  });
+  const chartData = useQuery(api.analytics.getChartData, { ward: wardArg });
 
   const newConstructionPoints = useQuery(api.analytics.getNewConstructionPoints, {
     ward: wardArg,
-    walkBucket: walkArg,
   });
 
   const txStats = useQuery(api.transactions.getStats, {});
 
-  const walkCounts = useQuery(api.analytics.getWalkBucketCounts, { ward: wardArg });
-
-  const propertiesWithData = useQuery(api.analytics.getPropertiesWithDataCounts, {
+  // エリア（区）で絞った物件一覧をバックエンドから取得
+  const allProperties = useQuery(api.analytics.getPropertiesWithDataCounts, {
     ward: wardArg,
-    walkBucket: walkArg,
   });
+
+  // 駅徒歩フィルターは各物件の walkMinutes を使ってフロント側で適用
+  const propertiesWithData = allProperties?.filter((p) =>
+    inWalkBucket(p.walkMinutes, walkBucket),
+  );
+
+  // バケットごとの件数（バッジ表示用・クライアント集計）
+  const walkCounts = allProperties
+    ? {
+        all: allProperties.length,
+        w0_5: allProperties.filter((p) => inWalkBucket(p.walkMinutes, "w0_5")).length,
+        w6_9: allProperties.filter((p) => inWalkBucket(p.walkMinutes, "w6_9")).length,
+        w10up: allProperties.filter((p) => inWalkBucket(p.walkMinutes, "w10up")).length,
+      }
+    : undefined;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -131,6 +149,10 @@ export default function PublicAnalyticsPage() {
             })}
           </div>
         </div>
+
+        <p className="text-xs text-slate-500 w-full">
+          ※「駅徒歩」フィルターは下の「対象物件一覧」に適用されます（上のグラフはエリア単位の集計です）。
+        </p>
       </div>
 
       {/* グラフ */}
