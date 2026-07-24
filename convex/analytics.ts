@@ -29,15 +29,29 @@ function computeAvgNewPrice(allTx: Doc<"transactions">[]): Record<string, number
 }
 
 // 残存年数5年刻みバケットの集計（getChartData のライブ集計・rebuildCache と同一ロジック）
+type BucketRow = {
+  remainingYearsBucket: string;
+  bucketMin: number;
+  bucketMax: number;
+  avgPricePerSqm: number;
+  medianPricePerSqm: number;
+  avgPricePerTsubo: number;
+  medianPricePerTsubo: number;
+  avgPriceRatio?: number;
+  medianPriceRatio?: number;
+  ratioSampleCount?: number;
+  sampleCount: number;
+};
+
 function computeBucketRows(
   resale: Doc<"transactions">[],
   avgNewPrice: Record<string, number>,
-) {
+): BucketRow[] {
   const buckets: Array<{ min: number; max: number; label: string }> = [];
   for (let max = 70; max >= 5; max -= 5) {
     buckets.push({ min: max - 5, max, label: `${max - 5}-${max}` });
   }
-  const rows = [];
+  const rows: BucketRow[] = [];
   for (const bucket of buckets) {
     const inBucket = resale.filter(
       (t) => t.remainingLeaseYears >= bucket.min && t.remainingLeaseYears < bucket.max,
@@ -58,18 +72,17 @@ function computeBucketRows(
       })
       .filter((r): r is number => r !== null);
     const sortedRatios = [...ratios].sort((a, b) => a - b);
-    const ratioFields =
+    const ratioFields: Pick<
+      BucketRow,
+      "avgPriceRatio" | "medianPriceRatio" | "ratioSampleCount"
+    > =
       ratios.length > 0
         ? {
-            avgPriceRatio: ratios.reduce((a, b) => a + b, 0) / ratios.length as number | undefined,
-            medianPriceRatio: sortedRatios[Math.floor(sortedRatios.length / 2)] as number | undefined,
-            ratioSampleCount: ratios.length as number | undefined,
+            avgPriceRatio: ratios.reduce((a, b) => a + b, 0) / ratios.length,
+            medianPriceRatio: sortedRatios[Math.floor(sortedRatios.length / 2)],
+            ratioSampleCount: ratios.length,
           }
-        : {
-            avgPriceRatio: undefined as number | undefined,
-            medianPriceRatio: undefined as number | undefined,
-            ratioSampleCount: undefined as number | undefined,
-          };
+        : {};
     rows.push({
       remainingYearsBucket: bucket.label,
       bucketMin: bucket.min,
