@@ -21,21 +21,44 @@ const WARDS = [
   "板橋区", "練馬区", "足立区", "葛飾区", "江戸川区",
 ];
 
+const WALK_BUCKETS: { key: "all" | "w0_5" | "w6_9" | "w10up"; label: string }[] = [
+  { key: "all", label: "全て" },
+  { key: "w0_5", label: "5分以内" },
+  { key: "w6_9", label: "6〜9分" },
+  { key: "w10up", label: "10分以上" },
+];
+
+const WALK_LABEL: Record<string, string> = {
+  all: "駅徒歩 全て",
+  w0_5: "徒歩5分以内",
+  w6_9: "徒歩6〜9分",
+  w10up: "徒歩10分以上",
+};
+
 export default function PublicAnalyticsPage() {
   const [selectedWard, setSelectedWard] = useState<string>("all");
+  const [walkBucket, setWalkBucket] = useState<string>("all");
+
+  const wardArg = selectedWard === "all" ? undefined : selectedWard;
+  const walkArg = walkBucket === "all" ? undefined : walkBucket;
 
   const chartData = useQuery(api.analytics.getChartData, {
-    ward: selectedWard === "all" ? undefined : selectedWard,
+    ward: wardArg,
+    walkBucket: walkArg,
   });
 
   const newConstructionPoints = useQuery(api.analytics.getNewConstructionPoints, {
-    ward: selectedWard === "all" ? undefined : selectedWard,
+    ward: wardArg,
+    walkBucket: walkArg,
   });
 
   const txStats = useQuery(api.transactions.getStats, {});
 
+  const walkCounts = useQuery(api.analytics.getWalkBucketCounts, { ward: wardArg });
+
   const propertiesWithData = useQuery(api.analytics.getPropertiesWithDataCounts, {
-    ward: selectedWard === "all" ? undefined : selectedWard,
+    ward: wardArg,
+    walkBucket: walkArg,
   });
 
   return (
@@ -78,6 +101,36 @@ export default function PublicAnalyticsPage() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* 駅徒歩フィルター */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-sm font-medium text-slate-700 whitespace-nowrap">駅徒歩</label>
+          <div className="inline-flex flex-wrap rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+            {WALK_BUCKETS.map((b) => {
+              const cnt = walkCounts
+                ? (walkCounts as Record<string, number>)[b.key]
+                : undefined;
+              const active = walkBucket === b.key;
+              return (
+                <button
+                  key={b.key}
+                  type="button"
+                  onClick={() => setWalkBucket(b.key)}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    active
+                      ? "bg-white text-slate-900 font-semibold shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {b.label}
+                  {cnt !== undefined && (
+                    <span className="ml-1 text-xs text-slate-400">{cnt}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* グラフ */}
@@ -98,7 +151,8 @@ export default function PublicAnalyticsPage() {
             対象物件一覧
             {propertiesWithData && (
               <span className="ml-2 text-sm font-normal text-slate-500">
-                （{selectedWard === "all" ? "東京23区 全体" : selectedWard}・{propertiesWithData.length}件）
+                （{selectedWard === "all" ? "東京23区 全体" : selectedWard}
+                {walkBucket !== "all" ? ` / ${WALK_LABEL[walkBucket]}` : ""}・{propertiesWithData.length}件）
               </span>
             )}
           </h2>
